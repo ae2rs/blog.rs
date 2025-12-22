@@ -4,13 +4,13 @@
 
 @layer base {
   :root {
-    color-scheme: light;
+    color-scheme: dark;
   }
 
   body {
     margin: 0;
-    background: #faf7f2;
-    color: #1f1f1f;
+    background: #121212;
+    color: #e6e6e6;
     font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia,
       "Times New Roman", serif;
     line-height: 1.7;
@@ -26,6 +26,7 @@
     font-size: 2.25rem;
     margin: 0 0 1rem;
     letter-spacing: -0.02em;
+    color: #f2f2f2;
   }
 
   p {
@@ -33,12 +34,12 @@
   }
 
   a {
-    color: #1f3a5f;
+    color: #9bbcff;
     text-decoration: none;
     border-bottom: 1px solid currentColor;
   }
 
   a:hover {
-    color: #0f2a44;
+    color: #c7dbff;
   }
 }
