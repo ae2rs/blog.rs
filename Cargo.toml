@@ -2,11 +2,17 @@
 name = "blog"
 version = "0.1.0"
 edition = "2024"
-build = "build.rs"
+
+[lib]
+name = "blib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "blog"
+path = "bin/main.rs"
 
 [dependencies]
 axum = "0.8.8"
-css-minify = "0.5.2"
 env_logger = "0.11.8"
 log = "0.4.29"
 maud = { version = "0.27.0", features = ["axum"] }
