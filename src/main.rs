@@ -9,8 +9,10 @@ async fn main() {
 
     let app = Router::new()
         .route("/", get(index))
-        .nest_service("/style", ServeDir::new("styles"));
+        .nest_service("/style", ServeDir::new("public/style"));
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
+        .await
+        .expect("failed to bind");
+    axum::serve(listener, app).await.expect("failed to serve");
 }

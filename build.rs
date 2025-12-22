@@ -1,7 +1,7 @@
 use std::{env, process::Command};
 
 fn main() {
-    println!("cargo:rerun-if-changed=style/index.css");
+    println!("cargo:rerun-if-changed=public/style/index.css");
 
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
     let status = Command::new("bunx")
@@ -9,9 +9,9 @@ fn main() {
         .args([
             "lightningcss-cli",
             "-m",
-            "style/index.css",
+            "public/style/index.css",
             "-o",
-            "style/index.min.css",
+            "public/style/index.min.css",
         ])
         .status()
         .expect("failed to execute bunx (is Bun installed?)");
