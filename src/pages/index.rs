@@ -1,14 +1,8 @@
 use maud::{DOCTYPE, Markup, html};
 
-fn doctype() -> Markup {
-    html! {
-        (DOCTYPE)
-    }
-}
-
 pub async fn page() -> Markup {
     html! {
-        (doctype())
+        (DOCTYPE)
         html lang="en" {
             head {
                 meta charset="utf-8";
