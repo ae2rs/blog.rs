@@ -16,8 +16,13 @@ pub async fn page() -> Markup {
                 link rel="stylesheet" href="/style/index.css";
             }
             body {
-                h1 { "Lucas' Hut" }
-                p { "Welcome to my hut!" }
+                main {
+                    h1 { "Lucas' Hut" }
+                    p { "Welcome to my hut!" }
+                    p {
+                        a href="#" { "Read the first post" }
+                    }
+                }
             }
         }
     }
