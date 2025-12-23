@@ -33,6 +33,9 @@ fn main() {
 
     let status = Command::new(&bin_path)
         .current_dir(&manifest_dir)
+        .arg("build")
+        .arg("--config")
+        .arg(manifest_dir.join("tailwind.config.js"))
         .arg("-i")
         .arg(input)
         .arg("-o")
