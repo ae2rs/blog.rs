@@ -9,6 +9,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/", get(pages::index))
+        .route("/about", get(pages::about))
         .nest_service("/style", ServeDir::new("public/style"))
         .nest_service("/img", ServeDir::new("public/img"));
 
