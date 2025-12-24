@@ -3,7 +3,6 @@ use maud::{Markup, html};
 
 pub async fn page() -> Markup {
     let content = html! {
-        h1 { "Lucas' Hut" }
         div class="flex flex-col items-start gap-6 sm:flex-row sm:items-center my-4" {
             img src="/img/avatar.png"
                 alt="Portrait of Lucas de Castro"
