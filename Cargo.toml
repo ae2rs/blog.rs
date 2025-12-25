@@ -16,6 +16,7 @@ path = "bin/main.rs"
 axum = "0.8.8"
 env_logger = "0.11.8"
 log = "0.4.29"
+markdown = "1.0.0"
 maud = { version = "0.27.0", features = ["axum"] }
 rust-embed = "8.9.0"
 serde = { version = "1.0.228", features = ["derive"] }
