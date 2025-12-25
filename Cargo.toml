@@ -4,25 +4,25 @@ version = "0.1.0"
 edition = "2024"
 build = "build.rs"
 
+[workspace]
+members = ["macros"]
+
 [lib]
 name = "blib"
 path = "src/lib.rs"
 
 [[bin]]
 name = "blog"
-path = "bin/main.rs"
+path = "main.rs"
 
 [dependencies]
 axum = "0.8.8"
 env_logger = "0.11.8"
 log = "0.4.29"
+macros = { path = "macros" }
 markdown = "1.0.0"
 maud = { version = "0.27.0", features = ["axum"] }
-macros = { path = "macros" }
 serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.48.0", features = ["rt-multi-thread"] }
 tower-http = { version = "0.6.6", features = ["fs", "set-header"] }
 tracing-subscriber = "0.3.22"
-
-[workspace]
-members = ["macros"]
