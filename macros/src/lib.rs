@@ -244,6 +244,24 @@ pub fn derive_post(input: TokenStream) -> TokenStream {
             ) -> impl Iterator<Item = &'static crate::content::meta::Post> {
                 Self::map().values()
             }
+
+            pub fn get_published(title: &str) -> Option<&'static crate::content::meta::Post> {
+                Self::get(title).filter(|post| !post.meta.draft)
+            }
+
+            pub fn published_posts(
+            ) -> &'static Vec<&'static crate::content::meta::Post> {
+                static POSTS: std::sync::OnceLock<
+                    Vec<&'static crate::content::meta::Post>,
+                > = std::sync::OnceLock::new();
+                POSTS.get_or_init(|| {
+                    let mut posts = Self::iter()
+                        .filter(|post| !post.meta.draft)
+                        .collect::<Vec<_>>();
+                    posts.sort_by_key(|post| std::cmp::Reverse(post.meta.published));
+                    posts
+                })
+            }
         }
     };
 

@@ -7,7 +7,7 @@ use maud::{Markup, PreEscaped};
 struct Posts;
 
 fn get_post_by_id(id: &str) -> Option<&'static Post> {
-    Posts::get(id).filter(|post| !post.meta.draft)
+    Posts::get_published(id)
 }
 
 pub async fn get_post(Path(id): Path<String>) -> (StatusCode, Markup) {
@@ -23,10 +23,6 @@ pub async fn get_post(Path(id): Path<String>) -> (StatusCode, Markup) {
     )
 }
 
-pub fn get_posts() -> Vec<&'static Post> {
-    let mut posts = Posts::iter().collect::<Vec<_>>();
-
-    posts.sort_by_key(|post| post.meta.published);
-
-    posts
+pub fn get_posts() -> &'static Vec<&'static Post> {
+    Posts::published_posts()
 }

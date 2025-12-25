@@ -14,12 +14,17 @@
     font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia,
       "Times New Roman", serif;
     line-height: 1.7;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
   }
 
   main {
-    max-width: 38rem;
+    max-width: 44rem;
     margin: 3.5rem auto;
     padding: 0 1.25rem;
+    width: 100%;
+    flex: 1;
   }
 
   h1 {
@@ -41,5 +46,25 @@
 
   a:hover {
     color: #c7dbff;
+  }
+
+  .site-footer a {
+    color: inherit;
+    border-bottom: none;
+  }
+
+  .site-footer a:hover {
+    color: #f2f2f2;
+  }
+
+  .site-footer {
+    gap: 0.85rem;
+    font-family: "Avenir Next", Avenir, "Helvetica Neue", "Segoe UI", "Noto Sans", Arial,
+      sans-serif;
+  }
+
+  .footer-separator {
+    opacity: 0.5;
+    padding: 0 0.65rem;
   }
 }
