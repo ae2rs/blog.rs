@@ -18,8 +18,11 @@ env_logger = "0.11.8"
 log = "0.4.29"
 markdown = "1.0.0"
 maud = { version = "0.27.0", features = ["axum"] }
-rust-embed = "8.9.0"
+post_macros = { path = "post_macros" }
 serde = { version = "1.0.228", features = ["derive"] }
 tokio = { version = "1.48.0", features = ["rt-multi-thread"] }
 tower-http = { version = "0.6.6", features = ["fs", "set-header"] }
 tracing-subscriber = "0.3.22"
+
+[workspace]
+members = ["post_macros"]

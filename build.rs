@@ -57,6 +57,7 @@ fn main() {
     println!("cargo:rerun-if-changed=styles/index.css");
     println!("cargo:rerun-if-changed=tailwind.config.js");
     println!("cargo:rerun-if-changed=src");
+    println!("cargo:rerun-if-changed=content");
     println!("cargo:rerun-if-changed=assets");
 
     let os = env::var("CARGO_CFG_TARGET_OS").unwrap_or_else(|_| "unknown".to_string());
