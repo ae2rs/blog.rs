@@ -59,8 +59,8 @@
 
   .site-footer {
     gap: 0.85rem;
-    font-family: "Avenir Next", Avenir, "Helvetica Neue", "Segoe UI", "Noto Sans", Arial,
-      sans-serif;
+    font-family: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+      monospace;
   }
 
   .footer-separator {
