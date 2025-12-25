@@ -16,7 +16,10 @@ enum FrameKind {
     Paragraph,
     Heading(HeadingLevel),
     BlockQuote,
-    CodeBlock { info: Option<String>, text: String },
+    CodeBlock {
+        info: Option<String>,
+        text: String,
+    },
     List(Option<u64>),
     Item,
     Emphasis,
@@ -120,7 +123,7 @@ fn handle_end_event(_tag_end: TagEnd, frames: &mut Vec<Frame>) {
     append_markup(rendered, frames);
 }
 
-fn handle_text_event(text: CowStr, frames: &mut Vec<Frame>) {
+fn handle_text_event(text: CowStr, frames: &mut [Frame]) {
     if let Some(Frame {
         kind: FrameKind::CodeBlock { text: buffer, .. },
         ..
@@ -142,47 +145,47 @@ fn handle_text_event(text: CowStr, frames: &mut Vec<Frame>) {
     append_markup(html! { (text.as_ref()) }, frames);
 }
 
-fn handle_code_event(code: CowStr, frames: &mut Vec<Frame>) {
+fn handle_code_event(code: CowStr, frames: &mut [Frame]) {
     append_markup(html! { code { (code.as_ref()) } }, frames);
 }
 
-fn handle_inline_math_event(text: CowStr, frames: &mut Vec<Frame>) {
+fn handle_inline_math_event(text: CowStr, frames: &mut [Frame]) {
     append_markup(html! { span { (text.as_ref()) } }, frames);
 }
 
-fn handle_display_math_event(text: CowStr, frames: &mut Vec<Frame>) {
+fn handle_display_math_event(text: CowStr, frames: &mut [Frame]) {
     append_markup(html! { div { (text.as_ref()) } }, frames);
 }
 
-fn handle_html_event(raw: CowStr, frames: &mut Vec<Frame>) {
+fn handle_html_event(raw: CowStr, frames: &mut [Frame]) {
     append_markup(html! { (PreEscaped(raw.as_ref())) }, frames);
 }
 
-fn handle_inline_html_event(raw: CowStr, frames: &mut Vec<Frame>) {
+fn handle_inline_html_event(raw: CowStr, frames: &mut [Frame]) {
     append_markup(html! { (PreEscaped(raw.as_ref())) }, frames);
 }
 
-fn handle_footnote_reference_event(label: CowStr, frames: &mut Vec<Frame>) {
+fn handle_footnote_reference_event(label: CowStr, frames: &mut [Frame]) {
     append_markup(html! { sup { (label.as_ref()) } }, frames);
 }
 
-fn handle_soft_break_event(frames: &mut Vec<Frame>) {
+fn handle_soft_break_event(frames: &mut [Frame]) {
     append_markup(html! { " " }, frames);
 }
 
-fn handle_hard_break_event(frames: &mut Vec<Frame>) {
+fn handle_hard_break_event(frames: &mut [Frame]) {
     append_markup(html! { br; }, frames);
 }
 
-fn handle_rule_event(frames: &mut Vec<Frame>) {
+fn handle_rule_event(frames: &mut [Frame]) {
     append_markup(html! { hr; }, frames);
 }
 
-fn handle_task_list_marker_event(_checked: bool, frames: &mut Vec<Frame>) {
+fn handle_task_list_marker_event(_checked: bool, frames: &mut [Frame]) {
     append_markup(html! { input type="checkbox" disabled? checked?; }, frames);
 }
 
-fn append_markup(markup: Markup, frames: &mut Vec<Frame>) {
+fn append_markup(markup: Markup, frames: &mut [Frame]) {
     if let Some(frame) = frames.last_mut() {
         frame.buffer.push(markup);
     }
