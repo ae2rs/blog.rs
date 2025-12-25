@@ -1,6 +1,7 @@
 use axum::{Router, routing::get};
 use tower_http::services::ServeDir;
 
+use blib::content;
 use blib::pages;
 
 #[tokio::main(flavor = "multi_thread")]
@@ -10,8 +11,10 @@ async fn main() {
     let app = Router::new()
         .route("/", get(pages::index))
         .route("/about", get(pages::about))
+        .route("/post/{id}", get(content::get_post))
         .nest_service("/style", ServeDir::new("public/style"))
-        .nest_service("/img", ServeDir::new("public/img"));
+        .nest_service("/img", ServeDir::new("public/img"))
+        .fallback(pages::not_found);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
         .await
