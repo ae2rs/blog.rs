@@ -7,7 +7,7 @@ use super::highlight::highlight_code_block;
 #[derive(Debug)]
 struct Frame {
     kind: FrameKind,
-    buffer: Vec<Markup>,
+    buffer: Vec<RenderNode>,
 }
 
 #[derive(Debug)]
@@ -40,6 +40,12 @@ enum FrameKind {
     TableCell,
 }
 
+#[derive(Debug)]
+enum RenderNode {
+    Markup(Markup),
+    CodeBlock { info: Option<String>, text: String },
+}
+
 pub fn render_post(post: &Post) -> Markup {
     let mut frames = vec![Frame {
         kind: FrameKind::Root,
@@ -67,7 +73,7 @@ pub fn render_post(post: &Post) -> Markup {
     let root = frames
         .pop()
         .expect("render_post should always keep a root frame");
-    render_buffer(&root.buffer)
+    render_nodes(&root.buffer)
 }
 
 fn handle_start_event(tag: Tag, frames: &mut Vec<Frame>) {
@@ -120,7 +126,7 @@ fn handle_end_event(_tag_end: TagEnd, frames: &mut Vec<Frame>) {
 
     let frame = frames.pop().expect("frame stack underflow");
     let rendered = render_frame(frame);
-    append_markup(rendered, frames);
+    append_node(rendered, frames);
 }
 
 fn handle_text_event(text: CowStr, frames: &mut [Frame]) {
@@ -187,76 +193,103 @@ fn handle_task_list_marker_event(_checked: bool, frames: &mut [Frame]) {
 
 fn append_markup(markup: Markup, frames: &mut [Frame]) {
     if let Some(frame) = frames.last_mut() {
-        frame.buffer.push(markup);
+        frame.buffer.push(RenderNode::Markup(markup));
     }
 }
 
-fn render_buffer(buffer: &[Markup]) -> Markup {
+fn append_node(node: RenderNode, frames: &mut [Frame]) {
+    if let Some(frame) = frames.last_mut() {
+        frame.buffer.push(node);
+    }
+}
+
+fn render_nodes(buffer: &[RenderNode]) -> Markup {
+    let mut rendered = Vec::new();
+    let mut idx = 0;
+    while idx < buffer.len() {
+        match &buffer[idx] {
+            RenderNode::Markup(markup) => {
+                rendered.push(html! { (markup) });
+                idx += 1;
+            }
+            RenderNode::CodeBlock { .. } => {
+                let start = idx;
+                while idx < buffer.len() {
+                    if matches!(buffer[idx], RenderNode::CodeBlock { .. }) {
+                        idx += 1;
+                    } else {
+                        break;
+                    }
+                }
+                let run = &buffer[start..idx];
+                if run.len() == 1 {
+                    if let RenderNode::CodeBlock { info, text } = &run[0] {
+                        rendered.push(render_code_block(info, text));
+                    }
+                } else {
+                    rendered.push(render_code_block_group(run));
+                }
+            }
+        }
+    }
+
     html! {
-        @for node in buffer {
+        @for node in rendered {
             (node)
         }
     }
 }
 
-fn render_frame(frame: Frame) -> Markup {
+fn render_frame(frame: Frame) -> RenderNode {
     match frame.kind {
-        FrameKind::Root => render_buffer(&frame.buffer),
-        FrameKind::Paragraph => {
-            html! { p class="text-gray-300" { (render_buffer(&frame.buffer)) } }
-        }
+        FrameKind::Root => RenderNode::Markup(render_nodes(&frame.buffer)),
+        FrameKind::Paragraph => RenderNode::Markup(
+            html! { p class="text-gray-300" { (render_nodes(&frame.buffer)) } },
+        ),
         FrameKind::Heading(level) => match level {
-            HeadingLevel::H1 => html! {
+            HeadingLevel::H1 => RenderNode::Markup(html! {
                 h1 class="text-4xl md:text-5xl font-semibold tracking-tight text-white mt-10 mb-6" {
-                    (render_buffer(&frame.buffer))
+                    (render_nodes(&frame.buffer))
                 }
-            },
-            HeadingLevel::H2 => html! {
+            }),
+            HeadingLevel::H2 => RenderNode::Markup(html! {
                 h2 class="text-2xl md:text-3xl font-semibold tracking-tight text-white mt-10 mb-4" {
-                    (render_buffer(&frame.buffer))
+                    (render_nodes(&frame.buffer))
                 }
-            },
-            _ => html! {
+            }),
+            _ => RenderNode::Markup(html! {
                 h3 class="text-xl md:text-2xl font-semibold text-white mt-8 mb-3" {
-                    (render_buffer(&frame.buffer))
+                    (render_nodes(&frame.buffer))
                 }
-            },
+            }),
         },
-        FrameKind::BlockQuote => {
-            html! { blockquote class="text-gray-300" { (render_buffer(&frame.buffer)) } }
-        }
-        FrameKind::CodeBlock { info, text } => {
-            let language = info
-                .as_deref()
-                .and_then(|value| value.split_whitespace().next())
-                .filter(|value| !value.is_empty());
-            let highlighted = highlight_code_block(&text, language);
-            let language_class = language
-                .map(|value| format!("language-{}", value))
-                .unwrap_or_default();
-            html! {
-                div class="my-6 rounded-xl border border-white/10 bg-white/5 shadow-inner" {
-                    pre class="overflow-x-auto p-4 text-sm leading-6" {
-                        code class={ "block font-mono text-gray-100 " (language_class) } {
-                            (PreEscaped(highlighted))
-                        }
-                    }
-                }
-            }
-        }
+        FrameKind::BlockQuote => RenderNode::Markup(
+            html! { blockquote class="text-gray-300" { (render_nodes(&frame.buffer)) } },
+        ),
+        FrameKind::CodeBlock { info, text } => RenderNode::CodeBlock { info, text },
         FrameKind::List(start) => match start {
-            Some(start) => html! { ol start=(start) { (render_buffer(&frame.buffer)) } },
-            None => html! { ul { (render_buffer(&frame.buffer)) } },
+            Some(start) => RenderNode::Markup(
+                html! { ol start=(start) { (render_nodes(&frame.buffer)) } },
+            ),
+            None => RenderNode::Markup(html! { ul { (render_nodes(&frame.buffer)) } }),
         },
-        FrameKind::Item => html! { li class="text-gray-300" { (render_buffer(&frame.buffer)) } },
-        FrameKind::Emphasis => html! { em { (render_buffer(&frame.buffer)) } },
-        FrameKind::Strong => html! { strong { (render_buffer(&frame.buffer)) } },
-        FrameKind::Strikethrough => html! { del { (render_buffer(&frame.buffer)) } },
+        FrameKind::Item => RenderNode::Markup(
+            html! { li class="text-gray-300" { (render_nodes(&frame.buffer)) } },
+        ),
+        FrameKind::Emphasis => RenderNode::Markup(html! { em { (render_nodes(&frame.buffer)) } }),
+        FrameKind::Strong => RenderNode::Markup(html! { strong { (render_nodes(&frame.buffer)) } }),
+        FrameKind::Strikethrough => {
+            RenderNode::Markup(html! { del { (render_nodes(&frame.buffer)) } })
+        }
         FrameKind::Link { dest_url, title } => {
             if title.is_empty() {
-                html! { a href=(dest_url) { (render_buffer(&frame.buffer)) } }
+                RenderNode::Markup(
+                    html! { a href=(dest_url) { (render_nodes(&frame.buffer)) } },
+                )
             } else {
-                html! { a href=(dest_url) title=(title) { (render_buffer(&frame.buffer)) } }
+                RenderNode::Markup(html! {
+                    a href=(dest_url) title=(title) { (render_nodes(&frame.buffer)) }
+                })
             }
         }
         FrameKind::Image {
@@ -265,14 +298,81 @@ fn render_frame(frame: Frame) -> Markup {
             alt,
         } => {
             if title.is_empty() {
-                html! { img src=(dest_url) alt=(alt); }
+                RenderNode::Markup(html! { img src=(dest_url) alt=(alt); })
             } else {
-                html! { img src=(dest_url) alt=(alt) title=(title); }
+                RenderNode::Markup(html! { img src=(dest_url) alt=(alt) title=(title); })
             }
         }
-        FrameKind::Table => html! { table { (render_buffer(&frame.buffer)) } },
-        FrameKind::TableHead => html! { thead { (render_buffer(&frame.buffer)) } },
-        FrameKind::TableRow => html! { tr { (render_buffer(&frame.buffer)) } },
-        FrameKind::TableCell => html! { td { (render_buffer(&frame.buffer)) } },
+        FrameKind::Table => RenderNode::Markup(html! { table { (render_nodes(&frame.buffer)) } }),
+        FrameKind::TableHead => {
+            RenderNode::Markup(html! { thead { (render_nodes(&frame.buffer)) } })
+        }
+        FrameKind::TableRow => RenderNode::Markup(html! { tr { (render_nodes(&frame.buffer)) } }),
+        FrameKind::TableCell => RenderNode::Markup(html! { td { (render_nodes(&frame.buffer)) } }),
     }
+}
+
+fn render_code_block(info: &Option<String>, text: &str) -> Markup {
+    let language = code_language(info);
+    let shell_prompt = matches!(language, Some("sh" | "bash" | "fish"));
+    let highlighted = highlight_code_block(text, language, shell_prompt);
+    let language_class = language
+        .map(|value| format!("language-{}", value))
+        .unwrap_or_default();
+    html! {
+        div class="my-6 rounded-xl border border-white/10 bg-white/5 shadow-inner relative" {
+            button class="code-copy-btn absolute top-3 right-3 text-white/70 hover:text-white border border-white/20 hover:border-white/40 rounded-md p-1.5 transition-colors" type="button" aria-label="Copy code" {
+                (PreEscaped(r#"<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><path d="M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2"/></g></svg>"#))
+            }
+            pre class="overflow-x-auto p-4 text-sm leading-6" {
+                code class={ "block font-mono text-gray-100 " (language_class) } {
+                    (PreEscaped(highlighted))
+                }
+            }
+        }
+    }
+}
+
+fn render_code_block_group(run: &[RenderNode]) -> Markup {
+    html! {
+        div class="my-6 rounded-xl border border-white/10 bg-white/5 shadow-inner overflow-hidden" {
+            @for (idx, node) in run.iter().enumerate() {
+                @if let RenderNode::CodeBlock { info, text } = node {
+                    (render_code_block_inner(info, text, idx > 0))
+                }
+            }
+        }
+    }
+}
+
+fn render_code_block_inner(info: &Option<String>, text: &str, has_divider: bool) -> Markup {
+    let language = code_language(info);
+    let shell_prompt = matches!(language, Some("sh" | "bash" | "fish"));
+    let highlighted = highlight_code_block(text, language, shell_prompt);
+    let language_class = language
+        .map(|value| format!("language-{}", value))
+        .unwrap_or_default();
+    let divider_class = if has_divider {
+        "border-t border-white/10"
+    } else {
+        ""
+    };
+    html! {
+        div class={ "relative " (divider_class) } {
+            button class="code-copy-btn absolute top-3 right-3 text-white/70 hover:text-white border border-white/20 hover:border-white/40 rounded-md p-1.5 transition-colors" type="button" aria-label="Copy code" {
+                (PreEscaped(r#"<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><path d="M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2"/></g></svg>"#))
+            }
+            pre class="overflow-x-auto p-4 text-sm leading-6" {
+                code class={ "block font-mono text-gray-100 " (language_class) } {
+                    (PreEscaped(highlighted))
+                }
+            }
+        }
+    }
+}
+
+fn code_language(info: &Option<String>) -> Option<&str> {
+    info.as_deref()
+        .and_then(|value| value.split_whitespace().next())
+        .filter(|value| !value.is_empty())
 }
