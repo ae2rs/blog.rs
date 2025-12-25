@@ -190,16 +190,25 @@ fn render_buffer(buffer: &[Markup]) -> Markup {
 fn render_frame(frame: Frame) -> Markup {
     match frame.kind {
         FrameKind::Root => render_buffer(&frame.buffer),
-        FrameKind::Paragraph => html! { p { (render_buffer(&frame.buffer)) } },
+        FrameKind::Paragraph => html! { p class="text-gray-300" { (render_buffer(&frame.buffer)) } },
         FrameKind::Heading(level) => match level {
-            HeadingLevel::H1 => html! { h1 { (render_buffer(&frame.buffer)) } },
-            HeadingLevel::H2 => html! { h2 { (render_buffer(&frame.buffer)) } },
-            HeadingLevel::H3 => html! { h3 { (render_buffer(&frame.buffer)) } },
-            HeadingLevel::H4 => html! { h4 { (render_buffer(&frame.buffer)) } },
-            HeadingLevel::H5 => html! { h5 { (render_buffer(&frame.buffer)) } },
-            HeadingLevel::H6 => html! { h6 { (render_buffer(&frame.buffer)) } },
+            HeadingLevel::H1 => html! {
+                h1 class="text-4xl md:text-5xl font-semibold tracking-tight text-white mt-10 mb-6" {
+                    (render_buffer(&frame.buffer))
+                }
+            },
+            HeadingLevel::H2 => html! {
+                h2 class="text-2xl md:text-3xl font-semibold tracking-tight text-white mt-10 mb-4" {
+                    (render_buffer(&frame.buffer))
+                }
+            },
+            _ => html! {
+                h3 class="text-xl md:text-2xl font-semibold text-white mt-8 mb-3" {
+                    (render_buffer(&frame.buffer))
+                }
+            },
         },
-        FrameKind::BlockQuote => html! { blockquote { (render_buffer(&frame.buffer)) } },
+        FrameKind::BlockQuote => html! { blockquote class="text-gray-300" { (render_buffer(&frame.buffer)) } },
         FrameKind::CodeBlock(_info) => html! {
             pre { code { (render_buffer(&frame.buffer)) } }
         },
@@ -207,7 +216,7 @@ fn render_frame(frame: Frame) -> Markup {
             Some(start) => html! { ol start=(start) { (render_buffer(&frame.buffer)) } },
             None => html! { ul { (render_buffer(&frame.buffer)) } },
         },
-        FrameKind::Item => html! { li { (render_buffer(&frame.buffer)) } },
+        FrameKind::Item => html! { li class="text-gray-300" { (render_buffer(&frame.buffer)) } },
         FrameKind::Emphasis => html! { em { (render_buffer(&frame.buffer)) } },
         FrameKind::Strong => html! { strong { (render_buffer(&frame.buffer)) } },
         FrameKind::Strikethrough => html! { del { (render_buffer(&frame.buffer)) } },

@@ -9,14 +9,18 @@ pub fn layout(title: &str, content: Markup) -> Markup {
                 title { (title) }
                 ;
                 link rel="stylesheet" href="/style/index.css";
+                link rel="icon" type="image/png" href="/img/avatar.png";
             }
             body class="min-h-screen flex flex-col" {
                 main class="flex-1" {
-                    h1 class="text-3xl font-semibold" { "Lucas' Hut" }
-                    nav class="mb-6 flex items-center gap-4" {
-                        a href="/" { "Home" }
-                        a href="/posts" { "Posts" }
-                        a href="/about" { "About" }
+                    div class="mb-6 flex flex-wrap items-center gap-3 text-white" {
+                        h1 class="text-3xl font-semibold" { "Lucas' Hut" }
+                        span class="text-white/70 font-light -translate-y-0.5" { "/" }
+                        nav class="flex items-center gap-4 text-base -translate-y-0.5" {
+                            a class="border-b-0 no-underline" href="/" { "Home" }
+                            a class="border-b-0 no-underline" href="/posts" { "Posts" }
+                            a class="border-b-0 no-underline" href="/about" { "About" }
+                        }
                     }
                     (content)
                 }
