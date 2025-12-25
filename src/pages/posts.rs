@@ -7,7 +7,7 @@ pub async fn page() -> Markup {
     let content = html! {
         @for post in posts {
             div class="mb-4" {
-                a href=(format!("/{}", post.id)) { (post.meta.title) }
+                a href=(format!("/post/{}", post.id)) { (post.meta.title) }
                 p class="text-gray-500" {
                     (post.meta.published.year)
                     "-"

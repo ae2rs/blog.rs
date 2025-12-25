@@ -2,7 +2,7 @@ use proc_macro::TokenStream;
 use quote::quote;
 use std::fs;
 use std::path::{Path, PathBuf};
-use syn::{parse_macro_input, DeriveInput, LitStr};
+use syn::{DeriveInput, LitStr, parse_macro_input};
 
 fn strip_quotes(value: &str) -> &str {
     let bytes = value.as_bytes();
@@ -56,9 +56,8 @@ struct PostData {
 }
 
 fn parse_post(id: String, path: &Path) -> PostData {
-    let content = fs::read_to_string(path).unwrap_or_else(|err| {
-        panic!("failed to read post file {}: {}", path.display(), err)
-    });
+    let content = fs::read_to_string(path)
+        .unwrap_or_else(|err| panic!("failed to read post file {}: {}", path.display(), err));
 
     let mut lines = content.lines();
     let first = lines.next().unwrap_or_default();
@@ -85,10 +84,7 @@ fn parse_post(id: String, path: &Path) -> PostData {
     }
 
     if in_front {
-        panic!(
-            "post {} front matter must end with ---",
-            path.display()
-        );
+        panic!("post {} front matter must end with ---", path.display());
     }
 
     let mut title: Option<String> = None;
@@ -100,9 +96,9 @@ fn parse_post(id: String, path: &Path) -> PostData {
         if line.is_empty() {
             continue;
         }
-        let (key, value) = line.split_once(':').unwrap_or_else(|| {
-            panic!("invalid front matter line in {}: {}", path.display(), line)
-        });
+        let (key, value) = line
+            .split_once(':')
+            .unwrap_or_else(|| panic!("invalid front matter line in {}: {}", path.display(), line));
         let key = key.trim();
         let raw_value = strip_quotes(value.trim());
         match key {
@@ -191,10 +187,7 @@ pub fn derive_post(input: TokenStream) -> TokenStream {
             .to_string();
         let index_path = dir.join("index.md");
         if !index_path.exists() {
-            panic!(
-                "post directory {} is missing index.md",
-                dir.display()
-            );
+            panic!("post directory {} is missing index.md", dir.display());
         }
         posts.push(parse_post(id, &index_path));
     }

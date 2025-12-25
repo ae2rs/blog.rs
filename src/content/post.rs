@@ -1,7 +1,7 @@
 use crate::{common::layout, content::meta::Post, pages};
 use axum::{extract::Path, http::StatusCode};
+use macros::Post;
 use maud::{Markup, PreEscaped};
-use post_macros::Post;
 
 #[derive(Post)]
 struct Posts;

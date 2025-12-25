@@ -55,7 +55,7 @@ fn copy_dir_recursive(src: &PathBuf, dst: &PathBuf) {
 
 fn main() {
     println!("cargo:rerun-if-changed=styles/index.css");
-    println!("cargo:rerun-if-changed=tailwind.config.js");
+    println!("cargo:rerun-if-changed=styles/tailwind.config.js");
     println!("cargo:rerun-if-changed=src");
     println!("cargo:rerun-if-changed=content");
     println!("cargo:rerun-if-changed=assets");
@@ -86,7 +86,7 @@ fn main() {
         .current_dir(&manifest_dir)
         .arg("build")
         .arg("--config")
-        .arg(manifest_dir.join("tailwind.config.js"))
+        .arg(manifest_dir.join("styles").join("tailwind.config.js"))
         .arg("-i")
         .arg(input)
         .arg("-o")
