@@ -3,7 +3,7 @@ use maud::{Markup, html};
 
 pub async fn page() -> Markup {
     let content = html! {
-        div class="flex flex-col items-start gap-6 sm:flex-row sm:items-center my-4" {
+        div class="flex flex-col items-start gap-6 sm:flex-row sm:items-center my-4 mt-10" {
             img src="/img/avatar.png"
                 alt="Portrait of Lucas de Castro"
                 class="size-32 shrink-0 rounded-full border-4 border-white/20 object-cover";
@@ -16,13 +16,9 @@ pub async fn page() -> Markup {
             }
         }
 
-        section class="mt-8" {
+        section class="mt-20" {
             h2 class="text-xl font-semibold" { "Latest posts" }
-            ul class="mt-4 space-y-2" {
-                li {
-                    a href="#" { "Read the first post" }
-                }
-            }
+            ul class="mt-4 space-y-2" {}
         }
     };
 

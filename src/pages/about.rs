@@ -21,7 +21,9 @@ pub async fn page() -> Markup {
             " instead of "
             em { "something" }
             ", and I think it's time for me to start "
-            a href="https://pcandmore.net/blog/producing-instead-of-consuming/" { "producing after consuming so much" }
+            a href="https://pcandmore.net/blog/producing-instead-of-consuming/" {
+                "producing after consuming so much"
+            }
             "."
         }
     };
