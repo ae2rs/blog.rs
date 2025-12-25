@@ -1,5 +1,29 @@
-use crate::common::layout;
+use crate::{common::layout, content::get_posts};
 use maud::{Markup, html};
+
+pub fn post_section() -> Markup {
+    let posts = get_posts();
+
+    let content = html! {
+        @for post in posts {
+            div {
+                a class="text-white/80 hover:text-white" href=(format!("/post/{}", post.id)) {
+                    (post.meta.title)
+                }
+                span class="text-gray-500" {
+                    " · "
+                    (post.meta.published.year)
+                    "-"
+                    (post.meta.published.month)
+                    "-"
+                    (post.meta.published.day)
+                }
+            }
+        }
+    };
+
+    content
+}
 
 pub async fn page() -> Markup {
     let content = html! {
@@ -18,7 +42,7 @@ pub async fn page() -> Markup {
 
         section class="mt-20" {
             h2 class="text-xl font-semibold" { "Latest posts" }
-            ul class="mt-4 space-y-2" {}
+            ul class="mt-4" { (post_section()) }
         }
     };
 
