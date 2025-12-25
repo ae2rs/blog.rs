@@ -52,7 +52,6 @@ struct PostData {
     day: u8,
     draft: bool,
     markdown: String,
-    html: String,
 }
 
 fn parse_post(id: String, path: &Path) -> PostData {
@@ -142,7 +141,6 @@ fn parse_post(id: String, path: &Path) -> PostData {
     });
 
     let markdown = body_lines.join("\n");
-    let html = markdown::to_html(&markdown);
 
     PostData {
         id,
@@ -152,7 +150,6 @@ fn parse_post(id: String, path: &Path) -> PostData {
         day,
         draft,
         markdown,
-        html,
     }
 }
 
@@ -196,7 +193,6 @@ pub fn derive_post(input: TokenStream) -> TokenStream {
         let id_lit = LitStr::new(&post.id, name.span());
         let title_lit = LitStr::new(&post.title, name.span());
         let markdown_lit = LitStr::new(&post.markdown, name.span());
-        let html_lit = LitStr::new(&post.html, name.span());
         let year = post.year;
         let month = post.month;
         let day = post.day;
@@ -217,7 +213,11 @@ pub fn derive_post(input: TokenStream) -> TokenStream {
                         draft: #draft,
                     },
                     markdown: #markdown_lit,
-                    html: #html_lit,
+                    events: || {
+                        ::pulldown_cmark::TextMergeStream::new(
+                            ::pulldown_cmark::Parser::new(#markdown_lit),
+                        )
+                    },
                 },
             );
         }
