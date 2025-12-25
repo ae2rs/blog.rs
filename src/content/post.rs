@@ -1,6 +1,6 @@
 use crate::{common::layout, pages};
 use axum::{extract::Path, http::StatusCode};
-use maud::{Markup, PreEscaped, html};
+use maud::{Markup, PreEscaped};
 use rust_embed::Embed;
 
 #[derive(Embed)]
