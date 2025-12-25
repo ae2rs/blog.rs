@@ -14,7 +14,8 @@ pub fn layout(title: &str, content: Markup) -> Markup {
                 main {
                     h1 class="text-3xl font-semibold" { "Lucas' Hut" }
                     nav class="mb-6 flex items-center gap-4" {
-                        a class="" href="/" { "Home" }
+                        a href="/" { "Home" }
+                        a href="/posts" { "Posts" }
                         a href="/about" { "About" }
                     }
                     (content)

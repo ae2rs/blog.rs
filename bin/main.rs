@@ -11,6 +11,7 @@ async fn main() {
     let app = Router::new()
         .route("/", get(pages::index))
         .route("/about", get(pages::about))
+        .route("/posts", get(pages::posts))
         .route("/post/{id}", get(content::get_post))
         .nest_service("/style", ServeDir::new("public/style"))
         .nest_service("/img", ServeDir::new("public/img"))
