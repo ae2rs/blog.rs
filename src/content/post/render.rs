@@ -1,6 +1,7 @@
 use crate::content::meta::Post;
 use maud::{Markup, PreEscaped, html};
 use pulldown_cmark::{CodeBlockKind, CowStr, Event, HeadingLevel, Tag, TagEnd};
+use std::collections::HashMap;
 
 use super::highlight::highlight_code_block;
 
@@ -8,6 +9,7 @@ use super::highlight::highlight_code_block;
 struct Frame {
     kind: FrameKind,
     buffer: Vec<RenderNode>,
+    text: String,
 }
 
 #[derive(Debug)]
@@ -50,12 +52,14 @@ pub fn render_post(post: &Post) -> Markup {
     let mut frames = vec![Frame {
         kind: FrameKind::Root,
         buffer: Vec::new(),
+        text: String::new(),
     }];
+    let mut slug_counts = HashMap::new();
 
     for event in (post.events)() {
         match event {
             Event::Start(tag) => handle_start_event(tag, &mut frames),
-            Event::End(tag_end) => handle_end_event(tag_end, &mut frames),
+            Event::End(tag_end) => handle_end_event(tag_end, &mut frames, &mut slug_counts),
             Event::Text(text) => handle_text_event(text, &mut frames),
             Event::Code(code) => handle_code_event(code, &mut frames),
             Event::InlineMath(text) => handle_inline_math_event(text, &mut frames),
@@ -116,16 +120,21 @@ fn handle_start_event(tag: Tag, frames: &mut Vec<Frame>) {
     frames.push(Frame {
         kind,
         buffer: Vec::new(),
+        text: String::new(),
     });
 }
 
-fn handle_end_event(_tag_end: TagEnd, frames: &mut Vec<Frame>) {
+fn handle_end_event(
+    _tag_end: TagEnd,
+    frames: &mut Vec<Frame>,
+    slug_counts: &mut HashMap<String, usize>,
+) {
     if frames.len() <= 1 {
         return;
     }
 
     let frame = frames.pop().expect("frame stack underflow");
-    let rendered = render_frame(frame);
+    let rendered = render_frame(frame, slug_counts);
     append_node(rendered, frames);
 }
 
@@ -138,6 +147,8 @@ fn handle_text_event(text: CowStr, frames: &mut [Frame]) {
         buffer.push_str(text.as_ref());
         return;
     }
+
+    append_heading_text(frames, text.as_ref());
 
     if let Some(Frame {
         kind: FrameKind::Image { alt, .. },
@@ -152,6 +163,7 @@ fn handle_text_event(text: CowStr, frames: &mut [Frame]) {
 }
 
 fn handle_code_event(code: CowStr, frames: &mut [Frame]) {
+    append_heading_text(frames, code.as_ref());
     append_markup(
         html! { code class="text-[0.95em] bg-white/10 px-1 py-0.5 rounded box-decoration-clone [box-decoration-break:clone]" { (code.as_ref()) } },
         frames,
@@ -243,28 +255,31 @@ fn render_nodes(buffer: &[RenderNode]) -> Markup {
     }
 }
 
-fn render_frame(frame: Frame) -> RenderNode {
+fn render_frame(frame: Frame, slug_counts: &mut HashMap<String, usize>) -> RenderNode {
     match frame.kind {
         FrameKind::Root => RenderNode::Markup(render_nodes(&frame.buffer)),
         FrameKind::Paragraph => RenderNode::Markup(
             html! { p class="text-gray-300 mt-4 first:mt-0" { (render_nodes(&frame.buffer)) } },
         ),
         FrameKind::Heading(level) => match level {
-            HeadingLevel::H1 => RenderNode::Markup(html! {
-                h1 class="text-4xl md:text-5xl font-semibold tracking-tight text-white mt-10 mb-6" {
-                    (render_nodes(&frame.buffer))
-                }
-            }),
-            HeadingLevel::H2 => RenderNode::Markup(html! {
-                h2 class="text-2xl md:text-3xl font-semibold tracking-tight text-white mt-10 mb-4" {
-                    (render_nodes(&frame.buffer))
-                }
-            }),
-            _ => RenderNode::Markup(html! {
-                h3 class="text-xl md:text-2xl font-semibold text-white mt-8 mb-3" {
-                    (render_nodes(&frame.buffer))
-                }
-            }),
+            HeadingLevel::H1 => render_heading(
+                "h1",
+                "text-4xl md:text-5xl font-semibold tracking-tight text-white mt-10 mb-6",
+                &frame,
+                slug_counts,
+            ),
+            HeadingLevel::H2 => render_heading(
+                "h2",
+                "text-2xl md:text-3xl font-semibold tracking-tight text-white mt-10 mb-4",
+                &frame,
+                slug_counts,
+            ),
+            _ => render_heading(
+                "h3",
+                "text-xl md:text-2xl font-semibold text-white mt-8 mb-3",
+                &frame,
+                slug_counts,
+            ),
         },
         FrameKind::BlockQuote => RenderNode::Markup(
             html! { blockquote class="text-gray-300" { (render_nodes(&frame.buffer)) } },
@@ -278,12 +293,18 @@ fn render_frame(frame: Frame) -> RenderNode {
                 html! { ul class="list-disc pl-6 space-y-2 text-gray-300 mb-4" { (render_nodes(&frame.buffer)) } },
             ),
         },
-        FrameKind::Item => RenderNode::Markup(html! { li { (render_nodes(&frame.buffer)) } }),
-        FrameKind::Emphasis => RenderNode::Markup(html! { em { (render_nodes(&frame.buffer)) } }),
-        FrameKind::Strong => RenderNode::Markup(html! { strong { (render_nodes(&frame.buffer)) } }),
-        FrameKind::Strikethrough => {
-            RenderNode::Markup(html! { del { (render_nodes(&frame.buffer)) } })
-        }
+        FrameKind::Item => RenderNode::Markup(
+            html! { li { (render_nodes(&frame.buffer)) } },
+        ),
+        FrameKind::Emphasis => RenderNode::Markup(
+            html! { em { (render_nodes(&frame.buffer)) } },
+        ),
+        FrameKind::Strong => RenderNode::Markup(
+            html! { strong { (render_nodes(&frame.buffer)) } },
+        ),
+        FrameKind::Strikethrough => RenderNode::Markup(
+            html! { del { (render_nodes(&frame.buffer)) } },
+        ),
         FrameKind::Link { dest_url, title } => {
             if title.is_empty() {
                 RenderNode::Markup(
@@ -306,13 +327,81 @@ fn render_frame(frame: Frame) -> RenderNode {
                 RenderNode::Markup(html! { img src=(dest_url) alt=(alt) title=(title); })
             }
         }
-        FrameKind::Table => RenderNode::Markup(html! { table { (render_nodes(&frame.buffer)) } }),
-        FrameKind::TableHead => {
-            RenderNode::Markup(html! { thead { (render_nodes(&frame.buffer)) } })
-        }
-        FrameKind::TableRow => RenderNode::Markup(html! { tr { (render_nodes(&frame.buffer)) } }),
-        FrameKind::TableCell => RenderNode::Markup(html! { td { (render_nodes(&frame.buffer)) } }),
+        FrameKind::Table => RenderNode::Markup(
+            html! { table { (render_nodes(&frame.buffer)) } },
+        ),
+        FrameKind::TableHead => RenderNode::Markup(
+            html! { thead { (render_nodes(&frame.buffer)) } },
+        ),
+        FrameKind::TableRow => RenderNode::Markup(
+            html! { tr { (render_nodes(&frame.buffer)) } },
+        ),
+        FrameKind::TableCell => RenderNode::Markup(
+            html! { td { (render_nodes(&frame.buffer)) } },
+        ),
     }
+}
+
+fn append_heading_text(frames: &mut [Frame], text: &str) {
+    if let Some(frame) = frames
+        .iter_mut()
+        .rev()
+        .find(|frame| matches!(frame.kind, FrameKind::Heading(_)))
+    {
+        frame.text.push_str(text);
+    }
+}
+
+fn render_heading(
+    tag: &str,
+    classes: &str,
+    frame: &Frame,
+    slug_counts: &mut HashMap<String, usize>,
+) -> RenderNode {
+    let slug = unique_slug(&frame.text, slug_counts);
+    let anchor = html! {
+        a class="inline-flex items-center text-white/40 hover:text-white/70 text-base align-middle no-underline border-b-0 opacity-0 group-hover:opacity-100 focus:opacity-100 focus-visible:opacity-100 transition-opacity" href={ "#" (slug) } aria-label="Link to this section" {
+            (PreEscaped(r#"<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 15l6-6m-4-3l.463-.536a5 5 0 0 1 7.071 7.072L18 13m-5 5l-.397.534a5.07 5.07 0 0 1-7.127 0a4.97 4.97 0 0 1 0-7.071L6 11"/></svg>"#))
+        }
+    };
+    let content = render_nodes(&frame.buffer);
+    let heading_classes = format!("{} group flex items-baseline gap-3", classes);
+    RenderNode::Markup(match tag {
+        "h1" => html! { h1 id=(slug) class=(heading_classes) { span class="min-w-0" { (content) } (anchor) } },
+        "h2" => html! { h2 id=(slug) class=(heading_classes) { span class="min-w-0" { (content) } (anchor) } },
+        _ => html! { h3 id=(slug) class=(heading_classes) { span class="min-w-0" { (content) } (anchor) } },
+    })
+}
+
+fn unique_slug(text: &str, slug_counts: &mut HashMap<String, usize>) -> String {
+    let base = slugify(text);
+    let base = if base.is_empty() {
+        "section".to_string()
+    } else {
+        base
+    };
+    let entry = slug_counts.entry(base.clone()).or_insert(0);
+    *entry += 1;
+    if *entry == 1 {
+        base
+    } else {
+        format!("{}-{}", base, entry)
+    }
+}
+
+fn slugify(text: &str) -> String {
+    let mut slug = String::new();
+    let mut prev_dash = false;
+    for ch in text.to_lowercase().chars() {
+        if ch.is_ascii_alphanumeric() {
+            slug.push(ch);
+            prev_dash = false;
+        } else if !prev_dash {
+            slug.push('-');
+            prev_dash = true;
+        }
+    }
+    slug.trim_matches('-').to_string()
 }
 
 fn render_code_block(info: &Option<String>, text: &str) -> Markup {
