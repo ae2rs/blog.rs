@@ -306,13 +306,20 @@ fn render_frame(frame: Frame, slug_counts: &mut HashMap<String, usize>) -> Rende
             html! { del { (render_nodes(&frame.buffer)) } },
         ),
         FrameKind::Link { dest_url, title } => {
+            let is_external = dest_url.starts_with("http://")
+                || dest_url.starts_with("https://")
+                || dest_url.starts_with("mailto:");
             if title.is_empty() {
-                RenderNode::Markup(
-                    html! { a href=(dest_url) { (render_nodes(&frame.buffer)) } },
-                )
+                RenderNode::Markup(if is_external {
+                    html! { a href=(dest_url) target="_blank" rel="noopener noreferrer" { (render_nodes(&frame.buffer)) } }
+                } else {
+                    html! { a href=(dest_url) { (render_nodes(&frame.buffer)) } }
+                })
             } else {
-                RenderNode::Markup(html! {
-                    a href=(dest_url) title=(title) { (render_nodes(&frame.buffer)) }
+                RenderNode::Markup(if is_external {
+                    html! { a href=(dest_url) title=(title) target="_blank" rel="noopener noreferrer" { (render_nodes(&frame.buffer)) } }
+                } else {
+                    html! { a href=(dest_url) title=(title) { (render_nodes(&frame.buffer)) } }
                 })
             }
         }
