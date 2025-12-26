@@ -152,7 +152,10 @@ fn handle_text_event(text: CowStr, frames: &mut [Frame]) {
 }
 
 fn handle_code_event(code: CowStr, frames: &mut [Frame]) {
-    append_markup(html! { code { (code.as_ref()) } }, frames);
+    append_markup(
+        html! { code class="text-[0.95em] bg-white/10 px-1 py-0.5 rounded box-decoration-clone [box-decoration-break:clone]" { (code.as_ref()) } },
+        frames,
+    );
 }
 
 fn handle_inline_math_event(text: CowStr, frames: &mut [Frame]) {
@@ -269,13 +272,13 @@ fn render_frame(frame: Frame) -> RenderNode {
         FrameKind::CodeBlock { info, text } => RenderNode::CodeBlock { info, text },
         FrameKind::List(start) => match start {
             Some(start) => RenderNode::Markup(
-                html! { ol start=(start) { (render_nodes(&frame.buffer)) } },
+                html! { ol class="list-decimal pl-6 space-y-2 text-gray-300 mb-4" start=(start) { (render_nodes(&frame.buffer)) } },
             ),
-            None => RenderNode::Markup(html! { ul { (render_nodes(&frame.buffer)) } }),
+            None => RenderNode::Markup(
+                html! { ul class="list-disc pl-6 space-y-2 text-gray-300 mb-4" { (render_nodes(&frame.buffer)) } },
+            ),
         },
-        FrameKind::Item => RenderNode::Markup(
-            html! { li class="text-gray-300" { (render_nodes(&frame.buffer)) } },
-        ),
+        FrameKind::Item => RenderNode::Markup(html! { li { (render_nodes(&frame.buffer)) } }),
         FrameKind::Emphasis => RenderNode::Markup(html! { em { (render_nodes(&frame.buffer)) } }),
         FrameKind::Strong => RenderNode::Markup(html! { strong { (render_nodes(&frame.buffer)) } }),
         FrameKind::Strikethrough => {
@@ -320,8 +323,8 @@ fn render_code_block(info: &Option<String>, text: &str) -> Markup {
         .map(|value| format!("language-{}", value))
         .unwrap_or_default();
     html! {
-        div class="my-6 rounded-xl border border-white/10 bg-white/5 shadow-inner relative" {
-            button class="code-copy-btn absolute top-3 right-3 text-white/70 hover:text-white border border-white/20 hover:border-white/40 rounded-md p-1.5 transition-colors" type="button" aria-label="Copy code" {
+        div class="my-6 rounded-xl border border-white/10 bg-white/5 shadow-inner relative group" {
+            button class="code-copy-btn absolute top-3 right-3 text-white/70 hover:text-white border border-white/20 hover:border-white/40 rounded-md p-1.5 transition-colors opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto" type="button" aria-label="Copy code" {
                 (PreEscaped(r#"<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><path d="M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2"/></g></svg>"#))
             }
             pre class="overflow-x-auto p-4 text-sm leading-6" {
@@ -358,8 +361,8 @@ fn render_code_block_inner(info: &Option<String>, text: &str, has_divider: bool)
         ""
     };
     html! {
-        div class={ "relative " (divider_class) } {
-            button class="code-copy-btn absolute top-3 right-3 text-white/70 hover:text-white border border-white/20 hover:border-white/40 rounded-md p-1.5 transition-colors" type="button" aria-label="Copy code" {
+        div class={ "relative group " (divider_class) } {
+            button class="code-copy-btn absolute top-3 right-3 text-white/70 hover:text-white border border-white/20 hover:border-white/40 rounded-md p-1.5 transition-colors opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto" type="button" aria-label="Copy code" {
                 (PreEscaped(r#"<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><path d="M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2"/></g></svg>"#))
             }
             pre class="overflow-x-auto p-4 text-sm leading-6" {
