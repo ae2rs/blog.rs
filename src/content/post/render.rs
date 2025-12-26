@@ -247,7 +247,7 @@ fn render_frame(frame: Frame) -> RenderNode {
     match frame.kind {
         FrameKind::Root => RenderNode::Markup(render_nodes(&frame.buffer)),
         FrameKind::Paragraph => RenderNode::Markup(
-            html! { p class="text-gray-300" { (render_nodes(&frame.buffer)) } },
+            html! { p class="text-gray-300 mt-4 first:mt-0" { (render_nodes(&frame.buffer)) } },
         ),
         FrameKind::Heading(level) => match level {
             HeadingLevel::H1 => RenderNode::Markup(html! {
@@ -323,7 +323,7 @@ fn render_code_block(info: &Option<String>, text: &str) -> Markup {
         .map(|value| format!("language-{}", value))
         .unwrap_or_default();
     html! {
-        div class="my-6 rounded-xl border border-white/10 bg-white/5 shadow-inner relative group" {
+        div class="mt-3 mb-6 rounded-xl border border-white/10 bg-white/5 shadow-inner relative group" {
             button class="code-copy-btn absolute top-3 right-3 text-white/70 hover:text-white border border-white/20 hover:border-white/40 rounded-md p-1.5 transition-colors opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto" type="button" aria-label="Copy code" {
                 (PreEscaped(r#"<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><path d="M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2"/></g></svg>"#))
             }
@@ -338,7 +338,7 @@ fn render_code_block(info: &Option<String>, text: &str) -> Markup {
 
 fn render_code_block_group(run: &[RenderNode]) -> Markup {
     html! {
-        div class="my-6 rounded-xl border border-white/10 bg-white/5 shadow-inner overflow-hidden" {
+        div class="mt-3 mb-6 rounded-xl border border-white/10 bg-white/5 shadow-inner overflow-hidden" {
             @for (idx, node) in run.iter().enumerate() {
                 @if let RenderNode::CodeBlock { info, text } = node {
                     (render_code_block_inner(info, text, idx > 0))
