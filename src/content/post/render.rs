@@ -1,52 +1,9 @@
-use crate::content::post::meta::Post;
 use maud::{Markup, PreEscaped, html};
 use pulldown_cmark::{CodeBlockKind, CowStr, Event, HeadingLevel, Tag, TagEnd};
 use std::{collections::HashMap, path::Path};
 
-use super::highlight::highlight_code_block;
-
-#[derive(Debug)]
-struct Frame {
-    kind: FrameKind,
-    buffer: Vec<RenderNode>,
-    text: String,
-}
-
-#[derive(Debug)]
-enum FrameKind {
-    Root,
-    Paragraph,
-    Heading(HeadingLevel),
-    BlockQuote,
-    CodeBlock {
-        info: Option<String>,
-        text: String,
-    },
-    List(Option<u64>),
-    Item,
-    Emphasis,
-    Strong,
-    Strikethrough,
-    Link {
-        dest_url: String,
-        title: String,
-    },
-    Image {
-        dest_url: String,
-        title: String,
-        alt: String,
-    },
-    Table,
-    TableHead,
-    TableRow,
-    TableCell,
-}
-
-#[derive(Debug)]
-enum RenderNode {
-    Markup(Markup),
-    CodeBlock { info: Option<String>, text: String },
-}
+use super::types::{Frame, FrameKind, Post, RenderNode};
+use crate::content::format::highlight;
 
 pub fn render_post(post: &Post) -> Markup {
     let mut frames = vec![Frame {
@@ -557,7 +514,7 @@ fn is_local_image(dest_url: &str) -> bool {
 fn render_code_block(info: &Option<String>, text: &str) -> Markup {
     let language = code_language(info);
     let shell_prompt = matches!(language, Some("sh" | "bash" | "fish"));
-    let highlighted = highlight_code_block(text, language, shell_prompt);
+    let highlighted = highlight::highlight_code_block(text, language, shell_prompt);
     let language_class = language
         .map(|value| format!("language-{}", value))
         .unwrap_or_default();
@@ -600,7 +557,7 @@ fn render_code_block_group(run: &[RenderNode]) -> Markup {
 fn render_code_block_inner(info: &Option<String>, text: &str, has_divider: bool) -> Markup {
     let language = code_language(info);
     let shell_prompt = matches!(language, Some("sh" | "bash" | "fish"));
-    let highlighted = highlight_code_block(text, language, shell_prompt);
+    let highlighted = highlight::highlight_code_block(text, language, shell_prompt);
     let language_class = language
         .map(|value| format!("language-{}", value))
         .unwrap_or_default();

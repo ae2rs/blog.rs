@@ -1,3 +1,6 @@
+use maud::Markup;
+use pulldown_cmark::HeadingLevel;
+
 #[derive(Clone, Copy)]
 pub struct Date {
     pub year: u16,
@@ -42,4 +45,46 @@ pub struct Post {
     pub meta: PostMeta,
     pub markdown: &'static str,
     pub events: fn() -> pulldown_cmark::TextMergeStream<'static, pulldown_cmark::Parser<'static>>,
+}
+#[derive(Debug)]
+pub struct Frame {
+    pub kind: FrameKind,
+    pub buffer: Vec<RenderNode>,
+    pub text: String,
+}
+
+#[derive(Debug)]
+pub enum FrameKind {
+    Root,
+    Paragraph,
+    Heading(HeadingLevel),
+    BlockQuote,
+    CodeBlock {
+        info: Option<String>,
+        text: String,
+    },
+    List(Option<u64>),
+    Item,
+    Emphasis,
+    Strong,
+    Strikethrough,
+    Link {
+        dest_url: String,
+        title: String,
+    },
+    Image {
+        dest_url: String,
+        title: String,
+        alt: String,
+    },
+    Table,
+    TableHead,
+    TableRow,
+    TableCell,
+}
+
+#[derive(Debug)]
+pub enum RenderNode {
+    Markup(Markup),
+    CodeBlock { info: Option<String>, text: String },
 }

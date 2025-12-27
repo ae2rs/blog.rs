@@ -274,11 +274,11 @@ pub fn derive_post(input: TokenStream) -> TokenStream {
         quote! {
             map.insert(
                 #id_lit,
-                crate::content::post::meta::Post {
+                super::types::Post {
                     id: #id_lit,
-                    meta: crate::content::post::meta::PostMeta {
+                    meta: super::types::PostMeta {
                         title: #title_lit,
-                        published: crate::content::post::meta::Date {
+                        published: super::types::Date {
                             year: #year,
                             month: #month,
                             day: #day,
@@ -298,9 +298,9 @@ pub fn derive_post(input: TokenStream) -> TokenStream {
 
     let expanded = quote! {
         impl #name {
-            fn map() -> &'static std::collections::HashMap<&'static str, crate::content::post::meta::Post> {
+            fn map() -> &'static std::collections::HashMap<&'static str, super::types::Post> {
                 static POSTS: std::sync::OnceLock<
-                    std::collections::HashMap<&'static str, crate::content::post::meta::Post>,
+                    std::collections::HashMap<&'static str, super::types::Post>,
                 > = std::sync::OnceLock::new();
                 POSTS.get_or_init(|| {
                     let mut map = std::collections::HashMap::new();
@@ -309,23 +309,23 @@ pub fn derive_post(input: TokenStream) -> TokenStream {
                 })
             }
 
-            pub fn get(title: &str) -> Option<&'static crate::content::post::meta::Post> {
+            pub fn get(title: &str) -> Option<&'static super::types::Post> {
                 Self::map().get(title)
             }
 
             pub fn iter(
-            ) -> impl Iterator<Item = &'static crate::content::post::meta::Post> {
+            ) -> impl Iterator<Item = &'static super::types::Post> {
                 Self::map().values()
             }
 
-            pub fn get_published(title: &str) -> Option<&'static crate::content::post::meta::Post> {
+            pub fn get_published(title: &str) -> Option<&'static super::types::Post> {
                 Self::get(title).filter(|post| !post.meta.draft)
             }
 
             pub fn published_posts(
-            ) -> &'static Vec<&'static crate::content::post::meta::Post> {
+            ) -> &'static Vec<&'static super::types::Post> {
                 static POSTS: std::sync::OnceLock<
-                    Vec<&'static crate::content::post::meta::Post>,
+                    Vec<&'static super::types::Post>,
                 > = std::sync::OnceLock::new();
                 POSTS.get_or_init(|| {
                     let mut posts = Self::iter()
