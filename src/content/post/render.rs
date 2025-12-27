@@ -1,9 +1,9 @@
 use maud::{Markup, PreEscaped, html};
-use pulldown_cmark::{CodeBlockKind, CowStr, Event, HeadingLevel, Tag, TagEnd};
+use pulldown_cmark::{CodeBlockKind, CowStr, Event, HeadingLevel, Tag};
 use std::{collections::HashMap, path::Path};
 
 use super::types::{Frame, FrameKind, Post, RenderNode};
-use crate::content::format::highlight::Highlighter;
+use crate::{component::icons, content::format::highlight::Highlighter};
 
 pub fn render_post(post: &Post, highlighter: &Highlighter) -> Markup {
     let mut frames = vec![Frame {
@@ -17,8 +17,7 @@ pub fn render_post(post: &Post, highlighter: &Highlighter) -> Markup {
     for event in (post.events)() {
         match event {
             Event::Start(tag) => handle_start_event(tag, &mut frames),
-            Event::End(tag_end) => handle_end_event(
-                tag_end,
+            Event::End(_) => handle_end_event(
                 &mut frames,
                 &mut slug_counts,
                 post.id,
@@ -90,7 +89,6 @@ fn handle_start_event(tag: Tag, frames: &mut Vec<Frame>) {
 }
 
 fn handle_end_event(
-    _tag_end: TagEnd,
     frames: &mut Vec<Frame>,
     slug_counts: &mut HashMap<String, usize>,
     post_id: &str,
@@ -219,10 +217,14 @@ fn handle_rule_event(frames: &mut [Frame]) {
     );
 }
 
-fn handle_task_list_marker_event(_checked: bool, frames: &mut [Frame]) {
+fn handle_task_list_marker_event(checked: bool, frames: &mut [Frame]) {
     append_markup(
         html! {
-            input type="checkbox" disabled checked;
+            @if checked {
+                input type="checkbox" disabled checked;
+            } @else {
+                input type="checkbox" disabled;
+            }
         },
         frames,
     );
@@ -430,11 +432,7 @@ fn render_heading(
             href={ "#" (slug) }
             aria-label="Link to this section"
         {
-            ({
-                PreEscaped(
-                    r#"<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m9 15l6-6m-4-3l.463-.536a5 5 0 0 1 7.071 7.072L18 13m-5 5l-.397.534a5.07 5.07 0 0 1-7.127 0a4.97 4.97 0 0 1 0-7.071L6 11"/></svg>"#,
-                )
-            })
+            (PreEscaped(icons::LINK))
         }
     };
     let content = render_nodes(&frame.buffer, highlighter);
@@ -533,11 +531,7 @@ fn render_code_block(info: &Option<String>, text: &str, highlighter: &Highlighte
                 type="button"
                 aria-label="Copy code"
             {
-                ({
-                    PreEscaped(
-                        r#"<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><path d="M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2"/></g></svg>"#,
-                    )
-                })
+                (PreEscaped(icons::CODE_COPY))
             }
             pre class="overflow-x-auto p-4 text-[0.95rem] leading-6 sm:text-sm" {
                 code class={ "block font-mono text-gray-100 " (language_class) } {
@@ -585,11 +579,7 @@ fn render_code_block_inner(
                 type="button"
                 aria-label="Copy code"
             {
-                ({
-                    PreEscaped(
-                        r#"<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><path d="M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2"/></g></svg>"#,
-                    )
-                })
+                (PreEscaped(icons::CODE_COPY))
             }
             pre class="overflow-x-auto p-4 text-[0.95rem] leading-6 sm:text-sm" {
                 code class={ "block font-mono text-gray-100 " (language_class) } {
