@@ -5,14 +5,18 @@
 @layer base {
   :root {
     color-scheme: dark;
+    --page-pad: clamp(1rem, 4vw, 1.5rem);
   }
 
   html {
     scroll-behavior: smooth;
+    font-size: clamp(15px, 1vw + 12px, 17px);
   }
 
   body {
     margin: 0;
+    font-size: 1rem;
+    -webkit-text-size-adjust: 100%;
     background: #121212;
     color: #e6e6e6;
     font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia,
@@ -25,17 +29,23 @@
 
   main {
     max-width: 44rem;
-    margin: 3.5rem auto;
-    padding: 0 1.25rem;
+    margin: clamp(1.5rem, 6vw, 3.5rem) auto;
+    padding: 0 var(--page-pad);
     width: 100%;
     flex: 1;
+    min-height: 100vh;
   }
 
   h1 {
-    font-size: 2.25rem;
+    font-size: clamp(1.9rem, 5vw, 2.25rem);
     margin: 0 0 1rem;
     letter-spacing: -0.02em;
     color: #f2f2f2;
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
   }
 
   a {
@@ -66,5 +76,37 @@
   .footer-separator {
     opacity: 0.5;
     padding: 0 0.65rem;
+  }
+
+  @media (max-width: 900px) {
+    :root {
+      --page-pad: 0.75rem;
+    }
+  }
+
+  @media (max-width: 640px) {
+    html {
+      font-size: 15px;
+    }
+
+    :root {
+      --page-pad: 0.6rem;
+    }
+
+    main {
+      margin: 1.25rem 0;
+    }
+
+    .site-footer {
+      gap: 0.5rem;
+    }
+
+    .footer-separator {
+      display: inline;
+    }
+
+    .footer-extra {
+      display: none;
+    }
   }
 }

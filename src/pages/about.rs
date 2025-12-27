@@ -3,6 +3,7 @@ use maud::{Markup, html};
 
 pub async fn page() -> Markup {
     let content = html! {
+        h2 class="text-xl font-semibold mt-4 mb-4" { "About me" }
         p {
             "I've been coding and making software for the last ten years, and even if us SWEs tend to complain a lot, I just love my job."
         }

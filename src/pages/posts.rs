@@ -10,7 +10,7 @@ pub async fn page() -> Markup {
                 a class="text-white/80 hover:text-white" href=(format!("/post/{}", post.id)) {
                     (post.meta.title)
                 }
-                span class="text-gray-500" {
+                span class="text-gray-500 whitespace-nowrap" {
                     " · "
                     (post.meta.published.year)
                     "-"

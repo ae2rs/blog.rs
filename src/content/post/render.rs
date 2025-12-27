@@ -575,7 +575,7 @@ fn render_code_block(info: &Option<String>, text: &str) -> Markup {
                     )
                 })
             }
-            pre class="overflow-x-auto p-4 text-sm leading-6" {
+            pre class="overflow-x-auto p-4 text-[0.95rem] leading-6 sm:text-sm" {
                 code class={ "block font-mono text-gray-100 " (language_class) } {
                     (PreEscaped(highlighted))
                 }
@@ -622,7 +622,7 @@ fn render_code_block_inner(info: &Option<String>, text: &str, has_divider: bool)
                     )
                 })
             }
-            pre class="overflow-x-auto p-4 text-sm leading-6" {
+            pre class="overflow-x-auto p-4 text-[0.95rem] leading-6 sm:text-sm" {
                 code class={ "block font-mono text-gray-100 " (language_class) } {
                     (PreEscaped(highlighted))
                 }
