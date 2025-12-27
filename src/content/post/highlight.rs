@@ -6,6 +6,9 @@ use syntect::{
     util::LinesWithEndings,
 };
 
+static SET: std::sync::OnceLock<SyntaxSet> = std::sync::OnceLock::new();
+static THEME: std::sync::OnceLock<Theme> = std::sync::OnceLock::new();
+
 pub fn highlight_code_block(code: &str, language: Option<&str>, shell_prompt: bool) -> String {
     let syntax_set = syntax_set();
     let theme = theme();
@@ -15,12 +18,14 @@ pub fn highlight_code_block(code: &str, language: Option<&str>, shell_prompt: bo
     let mut highlighter = HighlightLines::new(syntax, theme);
     let mut output = String::new();
     let mut lines = LinesWithEndings::from(code).peekable();
+
     while let Some(line) = lines.next() {
         let ranges = highlighter
             .highlight_line(line, syntax_set)
             .unwrap_or_default();
         let html_line = styled_line_to_highlighted_html(&ranges, IncludeBackground::No)
             .unwrap_or_else(|_| line.to_string());
+
         if shell_prompt {
             let trimmed = line.trim_end_matches('\n');
             let is_trailing_empty = trimmed.trim().is_empty() && lines.peek().is_none();
@@ -41,12 +46,10 @@ pub fn highlight_code_block(code: &str, language: Option<&str>, shell_prompt: bo
 }
 
 fn syntax_set() -> &'static SyntaxSet {
-    static SET: std::sync::OnceLock<SyntaxSet> = std::sync::OnceLock::new();
     SET.get_or_init(SyntaxSet::load_defaults_newlines)
 }
 
 fn theme() -> &'static Theme {
-    static THEME: std::sync::OnceLock<Theme> = std::sync::OnceLock::new();
     THEME.get_or_init(|| {
         let themes = syntect::highlighting::ThemeSet::load_defaults();
         themes

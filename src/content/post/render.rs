@@ -1,4 +1,4 @@
-use crate::content::meta::Post;
+use crate::content::post::meta::Post;
 use maud::{Markup, PreEscaped, html};
 use pulldown_cmark::{CodeBlockKind, CowStr, Event, HeadingLevel, Tag, TagEnd};
 use std::{collections::HashMap, path::Path};

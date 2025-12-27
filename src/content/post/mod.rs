@@ -1,10 +1,12 @@
-use crate::{common::layout_with_head, content::meta::Post, pages};
+use crate::{common::layout_with_head, pages};
 use axum::{extract::Path, http::StatusCode, response::Html};
 use macros::Post;
 use maud::html;
+use meta::Post;
 use std::{collections::HashMap, sync::OnceLock};
 
 mod highlight;
+mod meta;
 mod render;
 
 #[derive(Post)]
