@@ -1,7 +1,7 @@
 use crate::content::meta::Post;
 use maud::{Markup, PreEscaped, html};
 use pulldown_cmark::{CodeBlockKind, CowStr, Event, HeadingLevel, Tag, TagEnd};
-use std::collections::HashMap;
+use std::{collections::HashMap, path::Path};
 
 use super::highlight::highlight_code_block;
 
@@ -55,11 +55,18 @@ pub fn render_post(post: &Post) -> Markup {
         text: String::new(),
     }];
     let mut slug_counts = HashMap::new();
+    let mut image_index = 0usize;
 
     for event in (post.events)() {
         match event {
             Event::Start(tag) => handle_start_event(tag, &mut frames),
-            Event::End(tag_end) => handle_end_event(tag_end, &mut frames, &mut slug_counts),
+            Event::End(tag_end) => handle_end_event(
+                tag_end,
+                &mut frames,
+                &mut slug_counts,
+                post.id,
+                &mut image_index,
+            ),
             Event::Text(text) => handle_text_event(text, &mut frames),
             Event::Code(code) => handle_code_event(code, &mut frames),
             Event::InlineMath(text) => handle_inline_math_event(text, &mut frames),
@@ -128,13 +135,15 @@ fn handle_end_event(
     _tag_end: TagEnd,
     frames: &mut Vec<Frame>,
     slug_counts: &mut HashMap<String, usize>,
+    post_id: &str,
+    image_index: &mut usize,
 ) {
     if frames.len() <= 1 {
         return;
     }
 
     let frame = frames.pop().expect("frame stack underflow");
-    let rendered = render_frame(frame, slug_counts);
+    let rendered = render_frame(frame, slug_counts, post_id, image_index);
     append_node(rendered, frames);
 }
 
@@ -309,7 +318,12 @@ fn render_nodes(buffer: &[RenderNode]) -> Markup {
     }
 }
 
-fn render_frame(frame: Frame, slug_counts: &mut HashMap<String, usize>) -> RenderNode {
+fn render_frame(
+    frame: Frame,
+    slug_counts: &mut HashMap<String, usize>,
+    post_id: &str,
+    image_index: &mut usize,
+) -> RenderNode {
     match frame.kind {
         FrameKind::Root => RenderNode::Markup(render_nodes(&frame.buffer)),
         FrameKind::Paragraph => RenderNode::Markup(html! {
@@ -398,15 +412,19 @@ fn render_frame(frame: Frame, slug_counts: &mut HashMap<String, usize>) -> Rende
             title,
             alt,
         } => {
-            if title.is_empty() {
-                RenderNode::Markup(html! {
-                    img src=(dest_url) alt=(alt);
-                })
-            } else {
-                RenderNode::Markup(html! {
-                    img src=(dest_url) alt=(alt) title=(title);
-                })
-            }
+            let dest_url = resolve_image_src(&dest_url, post_id, image_index);
+            RenderNode::Markup(html! {
+                figure class="flex flex-col items-center my-6" {
+                    @if title.is_empty() {
+                        img class="max-w-full rounded-md border border-white/10" src=(dest_url) alt=(alt);
+                    } @else {
+                        img class="max-w-full rounded-md border border-white/10" src=(dest_url) alt=(alt) title=(title);
+                        figcaption class="mt-2 text-sm text-gray-400 text-center" {
+                            (title)
+                        }
+                    }
+                }
+            })
         }
         FrameKind::Table => RenderNode::Markup(html! {
             table { (render_nodes(&frame.buffer)) }
@@ -505,6 +523,32 @@ fn slugify(text: &str) -> String {
         }
     }
     slug.trim_matches('-').to_string()
+}
+
+fn resolve_image_src(dest_url: &str, post_id: &str, image_index: &mut usize) -> String {
+    if !is_local_image(dest_url) {
+        return dest_url.to_string();
+    }
+    let extension = Path::new(dest_url)
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .expect("local image URLs must include a file extension");
+    *image_index += 1;
+    format!("/img/{}/{}.{}", post_id, *image_index, extension)
+}
+
+fn is_local_image(dest_url: &str) -> bool {
+    if dest_url.starts_with('/') {
+        return false;
+    }
+    if dest_url.starts_with("http://")
+        || dest_url.starts_with("https://")
+        || dest_url.starts_with("mailto:")
+        || dest_url.starts_with("data:")
+    {
+        return false;
+    }
+    !dest_url.contains("://")
 }
 
 fn render_code_block(info: &Option<String>, text: &str) -> Markup {

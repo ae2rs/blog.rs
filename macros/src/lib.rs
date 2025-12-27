@@ -1,4 +1,5 @@
 use proc_macro::TokenStream;
+use pulldown_cmark::{Event, Parser, Tag};
 use quote::quote;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -54,7 +55,7 @@ struct PostData {
     markdown: String,
 }
 
-fn parse_post(id: String, path: &Path) -> PostData {
+fn parse_post(id: String, path: &Path, manifest_dir: &Path) -> PostData {
     let content = fs::read_to_string(path)
         .unwrap_or_else(|err| panic!("failed to read post file {}: {}", path.display(), err));
 
@@ -141,6 +142,13 @@ fn parse_post(id: String, path: &Path) -> PostData {
     });
 
     let markdown = body_lines.join("\n");
+    let post_dir = path.parent().unwrap_or_else(|| {
+        panic!(
+            "post path {} missing parent directory",
+            path.display()
+        )
+    });
+    copy_post_images(&id, &markdown, post_dir, manifest_dir);
 
     PostData {
         id,
@@ -153,13 +161,84 @@ fn parse_post(id: String, path: &Path) -> PostData {
     }
 }
 
+fn copy_post_images(id: &str, markdown: &str, post_dir: &Path, manifest_dir: &Path) {
+    let mut index = 0usize;
+    for event in Parser::new(markdown) {
+        let Event::Start(Tag::Image { dest_url, .. }) = event else {
+            continue;
+        };
+        let dest_url = dest_url.as_ref();
+        if !is_local_image(dest_url) {
+            continue;
+        }
+        let extension = Path::new(dest_url)
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .unwrap_or_else(|| {
+                panic!(
+                    "post {} image {} is missing a file extension",
+                    id, dest_url
+                )
+            });
+        index += 1;
+        let source = {
+            let direct = post_dir.join(dest_url);
+            if direct.exists() {
+                direct
+            } else {
+                post_dir.join("img").join(dest_url)
+            }
+        };
+        if !source.exists() {
+            panic!(
+                "post {} image {} is missing at {}",
+                id,
+                dest_url,
+                source.display()
+            );
+        }
+        let target_dir = manifest_dir.join("build").join("img").join(id);
+        fs::create_dir_all(&target_dir).unwrap_or_else(|err| {
+            panic!(
+                "failed to create image output directory {}: {}",
+                target_dir.display(),
+                err
+            )
+        });
+        let target = target_dir.join(format!("{}.{}", index, extension));
+        fs::copy(&source, &target).unwrap_or_else(|err| {
+            panic!(
+                "failed to copy image from {} to {}: {}",
+                source.display(),
+                target.display(),
+                err
+            )
+        });
+    }
+}
+
+fn is_local_image(dest_url: &str) -> bool {
+    if dest_url.starts_with('/') {
+        return false;
+    }
+    if dest_url.starts_with("http://")
+        || dest_url.starts_with("https://")
+        || dest_url.starts_with("mailto:")
+        || dest_url.starts_with("data:")
+    {
+        return false;
+    }
+    !dest_url.contains("://")
+}
+
 #[proc_macro_derive(Post)]
 pub fn derive_post(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = input.ident;
 
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_default();
-    let content_dir = PathBuf::from(manifest_dir).join("content").join("post");
+    let manifest_dir = PathBuf::from(manifest_dir);
+    let content_dir = manifest_dir.join("content").join("post");
 
     let entries = fs::read_dir(&content_dir).unwrap_or_else(|err| {
         panic!(
@@ -186,7 +265,7 @@ pub fn derive_post(input: TokenStream) -> TokenStream {
         if !index_path.exists() {
             panic!("post directory {} is missing index.md", dir.display());
         }
-        posts.push(parse_post(id, &index_path));
+        posts.push(parse_post(id, &index_path, &manifest_dir));
     }
 
     let insertions = posts.iter().map(|post| {
