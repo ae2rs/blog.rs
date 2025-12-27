@@ -2,7 +2,7 @@
 
 ![CI](https://img.shields.io/github/actions/workflow/status/ae2rs/blog.rs/ci.yml?branch=main)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
-![Rust](https://img.shields.io/badge/rust-2024%20edition-000000.svg)
+![Rust](https://img.shields.io/badge/rust-2024%20edition-D16A2A.svg)
 
 Public repository for my blog, fully written in Rust. The server is built with Axum, templates are rendered with Maud, and styles are generated with Tailwind during `build.rs`.
 
