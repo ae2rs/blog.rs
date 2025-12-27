@@ -16,6 +16,7 @@ async fn main() {
         .route("/post/{id}", get(content::get_post))
         .nest_service("/style", ServeDir::new("build/style"))
         .nest_service("/img", ServeDir::new("build/img"))
+        .nest_service("/js", ServeDir::new("build/js"))
         .fallback(pages::not_found);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")

@@ -1,4 +1,4 @@
-use crate::{common::layout, content::meta::Post, pages};
+use crate::{common::layout_with_head, content::meta::Post, pages};
 use axum::{extract::Path, http::StatusCode, response::Html};
 use macros::Post;
 use maud::html;
@@ -17,7 +17,10 @@ fn render_post_page(post: &Post) -> String {
         h1 class="text-5xl font-semibold tracking-tight text-white mt-10 mb-6" { (post.meta.title) }
         (render::render_post(post))
     };
-    layout(post.meta.title, content).into_string()
+    let head_extras = html! {
+        script src="/js/code-copy.js" defer {}
+    };
+    layout_with_head(post.meta.title, content, Some(head_extras)).into_string()
 }
 
 fn post_pages() -> &'static HashMap<&'static str, String> {
