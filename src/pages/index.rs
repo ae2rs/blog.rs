@@ -1,9 +1,7 @@
-use crate::{common::layout, content::get_posts};
+use crate::{common::layout, content::Post};
 use maud::{Markup, html};
 
-pub fn post_section() -> Markup {
-    let posts = get_posts();
-
+pub fn post_section(posts: &[&'static Post]) -> Markup {
     let content = html! {
         @for post in posts {
             div {
@@ -25,7 +23,7 @@ pub fn post_section() -> Markup {
     content
 }
 
-pub async fn page() -> Markup {
+pub async fn page(posts: &[&'static Post]) -> Markup {
     let content = html! {
         div class="flex flex-col items-start gap-6 sm:flex-row sm:items-center my-4 mt-10" {
             img src="/img/avatar.png"
@@ -42,7 +40,7 @@ pub async fn page() -> Markup {
 
         section class="mt-20" {
             h2 class="text-xl font-semibold" { "Latest posts" }
-            ul class="mt-4" { (post_section()) }
+            ul class="mt-4" { (post_section(posts)) }
         }
     };
 

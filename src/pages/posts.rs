@@ -1,9 +1,7 @@
-use crate::{common::layout, content::get_posts};
+use crate::{common::layout, content::Post};
 use maud::{Markup, html};
 
-pub async fn page() -> Markup {
-    let posts = get_posts();
-
+pub async fn page(posts: &[&'static Post]) -> Markup {
     let posts = html! {
         @for post in posts {
             div {

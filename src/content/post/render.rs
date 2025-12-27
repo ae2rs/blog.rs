@@ -3,9 +3,9 @@ use pulldown_cmark::{CodeBlockKind, CowStr, Event, HeadingLevel, Tag, TagEnd};
 use std::{collections::HashMap, path::Path};
 
 use super::types::{Frame, FrameKind, Post, RenderNode};
-use crate::content::format::highlight;
+use crate::content::format::highlight::Highlighter;
 
-pub fn render_post(post: &Post) -> Markup {
+pub fn render_post(post: &Post, highlighter: &Highlighter) -> Markup {
     let mut frames = vec![Frame {
         kind: FrameKind::Root,
         buffer: Vec::new(),
@@ -23,6 +23,7 @@ pub fn render_post(post: &Post) -> Markup {
                 &mut slug_counts,
                 post.id,
                 &mut image_index,
+                highlighter,
             ),
             Event::Text(text) => handle_text_event(text, &mut frames),
             Event::Code(code) => handle_code_event(code, &mut frames),
@@ -41,7 +42,7 @@ pub fn render_post(post: &Post) -> Markup {
     let root = frames
         .pop()
         .expect("render_post should always keep a root frame");
-    render_nodes(&root.buffer)
+    render_nodes(&root.buffer, highlighter)
 }
 
 fn handle_start_event(tag: Tag, frames: &mut Vec<Frame>) {
@@ -94,13 +95,14 @@ fn handle_end_event(
     slug_counts: &mut HashMap<String, usize>,
     post_id: &str,
     image_index: &mut usize,
+    highlighter: &Highlighter,
 ) {
     if frames.len() <= 1 {
         return;
     }
 
     let frame = frames.pop().expect("frame stack underflow");
-    let rendered = render_frame(frame, slug_counts, post_id, image_index);
+    let rendered = render_frame(frame, slug_counts, post_id, image_index, highlighter);
     append_node(rendered, frames);
 }
 
@@ -238,7 +240,7 @@ fn append_node(node: RenderNode, frames: &mut [Frame]) {
     }
 }
 
-fn render_nodes(buffer: &[RenderNode]) -> Markup {
+fn render_nodes(buffer: &[RenderNode], highlighter: &Highlighter) -> Markup {
     let mut rendered = Vec::new();
     let mut idx = 0;
     while idx < buffer.len() {
@@ -261,10 +263,10 @@ fn render_nodes(buffer: &[RenderNode]) -> Markup {
                 let run = &buffer[start..idx];
                 if run.len() == 1 {
                     if let RenderNode::CodeBlock { info, text } = &run[0] {
-                        rendered.push(render_code_block(info, text));
+                        rendered.push(render_code_block(info, text, highlighter));
                     }
                 } else {
-                    rendered.push(render_code_block_group(run));
+                    rendered.push(render_code_block_group(run, highlighter));
                 }
             }
         }
@@ -280,11 +282,12 @@ fn render_frame(
     slug_counts: &mut HashMap<String, usize>,
     post_id: &str,
     image_index: &mut usize,
+    highlighter: &Highlighter,
 ) -> RenderNode {
     match frame.kind {
-        FrameKind::Root => RenderNode::Markup(render_nodes(&frame.buffer)),
+        FrameKind::Root => RenderNode::Markup(render_nodes(&frame.buffer, highlighter)),
         FrameKind::Paragraph => RenderNode::Markup(html! {
-            p class="text-gray-300 mt-4 first:mt-0" { (render_nodes(&frame.buffer)) }
+            p class="text-gray-300 mt-4 first:mt-0" { (render_nodes(&frame.buffer, highlighter)) }
         }),
         FrameKind::Heading(level) => match level {
             HeadingLevel::H1 => render_heading(
@@ -292,47 +295,50 @@ fn render_frame(
                 "text-4xl md:text-5xl font-semibold tracking-tight text-white mt-10 mb-6",
                 &frame,
                 slug_counts,
+                highlighter,
             ),
             HeadingLevel::H2 => render_heading(
                 "h2",
                 "text-2xl md:text-3xl font-semibold tracking-tight text-white mt-10 mb-4",
                 &frame,
                 slug_counts,
+                highlighter,
             ),
             _ => render_heading(
                 "h3",
                 "text-xl md:text-2xl font-semibold text-white mt-8 mb-3",
                 &frame,
                 slug_counts,
+                highlighter,
             ),
         },
         FrameKind::BlockQuote => RenderNode::Markup(html! {
-            blockquote class="text-gray-300" { (render_nodes(&frame.buffer)) }
+            blockquote class="text-gray-300" { (render_nodes(&frame.buffer, highlighter)) }
         }),
         FrameKind::CodeBlock { info, text } => RenderNode::CodeBlock { info, text },
         FrameKind::List(start) => match start {
             Some(start) => RenderNode::Markup(html! {
                 ol class="list-decimal pl-6 space-y-2 text-gray-300 mb-4" start=(start) {
-                    (render_nodes(&frame.buffer))
+                    (render_nodes(&frame.buffer, highlighter))
                 }
             }),
             None => RenderNode::Markup(html! {
                 ul class="list-disc pl-6 space-y-2 text-gray-300 mb-4" {
-                    (render_nodes(&frame.buffer))
+                    (render_nodes(&frame.buffer, highlighter))
                 }
             }),
         },
         FrameKind::Item => RenderNode::Markup(html! {
-            li { (render_nodes(&frame.buffer)) }
+            li { (render_nodes(&frame.buffer, highlighter)) }
         }),
         FrameKind::Emphasis => RenderNode::Markup(html! {
-            em { (render_nodes(&frame.buffer)) }
+            em { (render_nodes(&frame.buffer, highlighter)) }
         }),
         FrameKind::Strong => RenderNode::Markup(html! {
-            strong { (render_nodes(&frame.buffer)) }
+            strong { (render_nodes(&frame.buffer, highlighter)) }
         }),
         FrameKind::Strikethrough => RenderNode::Markup(html! {
-            del { (render_nodes(&frame.buffer)) }
+            del { (render_nodes(&frame.buffer, highlighter)) }
         }),
         FrameKind::Link { dest_url, title } => {
             let is_external = dest_url.starts_with("http://")
@@ -342,24 +348,24 @@ fn render_frame(
                 RenderNode::Markup(if is_external {
                     html! {
                         a href=(dest_url) target="_blank" rel="noopener noreferrer" {
-                            (render_nodes(&frame.buffer))
+                            (render_nodes(&frame.buffer, highlighter))
                         }
                     }
                 } else {
                     html! {
-                        a href=(dest_url) { (render_nodes(&frame.buffer)) }
+                        a href=(dest_url) { (render_nodes(&frame.buffer, highlighter)) }
                     }
                 })
             } else {
                 RenderNode::Markup(if is_external {
                     html! {
                         a href=(dest_url) title=(title) target="_blank" rel="noopener noreferrer" {
-                            (render_nodes(&frame.buffer))
+                            (render_nodes(&frame.buffer, highlighter))
                         }
                     }
                 } else {
                     html! {
-                        a href=(dest_url) title=(title) { (render_nodes(&frame.buffer)) }
+                        a href=(dest_url) title=(title) { (render_nodes(&frame.buffer, highlighter)) }
                     }
                 })
             }
@@ -387,16 +393,16 @@ fn render_frame(
             })
         }
         FrameKind::Table => RenderNode::Markup(html! {
-            table { (render_nodes(&frame.buffer)) }
+            table { (render_nodes(&frame.buffer, highlighter)) }
         }),
         FrameKind::TableHead => RenderNode::Markup(html! {
-            thead { (render_nodes(&frame.buffer)) }
+            thead { (render_nodes(&frame.buffer, highlighter)) }
         }),
         FrameKind::TableRow => RenderNode::Markup(html! {
-            tr { (render_nodes(&frame.buffer)) }
+            tr { (render_nodes(&frame.buffer, highlighter)) }
         }),
         FrameKind::TableCell => RenderNode::Markup(html! {
-            td { (render_nodes(&frame.buffer)) }
+            td { (render_nodes(&frame.buffer, highlighter)) }
         }),
     }
 }
@@ -416,6 +422,7 @@ fn render_heading(
     classes: &str,
     frame: &Frame,
     slug_counts: &mut HashMap<String, usize>,
+    highlighter: &Highlighter,
 ) -> RenderNode {
     let slug = unique_slug(&frame.text, slug_counts);
     let anchor = html! {
@@ -430,7 +437,7 @@ fn render_heading(
             })
         }
     };
-    let content = render_nodes(&frame.buffer);
+    let content = render_nodes(&frame.buffer, highlighter);
     let heading_classes = format!("{} group flex items-baseline gap-3", classes);
     RenderNode::Markup(match tag {
         "h1" => html! {
@@ -511,10 +518,10 @@ fn is_local_image(dest_url: &str) -> bool {
     !dest_url.contains("://")
 }
 
-fn render_code_block(info: &Option<String>, text: &str) -> Markup {
+fn render_code_block(info: &Option<String>, text: &str, highlighter: &Highlighter) -> Markup {
     let language = code_language(info);
     let shell_prompt = matches!(language, Some("sh" | "bash" | "fish"));
-    let highlighted = highlight::highlight_code_block(text, language, shell_prompt);
+    let highlighted = highlighter.highlight_code_block(text, language, shell_prompt);
     let language_class = language
         .map(|value| format!("language-{}", value))
         .unwrap_or_default();
@@ -541,23 +548,28 @@ fn render_code_block(info: &Option<String>, text: &str) -> Markup {
     }
 }
 
-fn render_code_block_group(run: &[RenderNode]) -> Markup {
+fn render_code_block_group(run: &[RenderNode], highlighter: &Highlighter) -> Markup {
     html! {
         div class="mt-3 mb-6 rounded-xl border border-white/10 bg-white/5 shadow-inner overflow-hidden"
         {
             @for (idx, node) in run.iter().enumerate() {
                 @if let RenderNode::CodeBlock { info, text } = node {
-                    (render_code_block_inner(info, text, idx > 0))
+                    (render_code_block_inner(info, text, idx > 0, highlighter))
                 }
             }
         }
     }
 }
 
-fn render_code_block_inner(info: &Option<String>, text: &str, has_divider: bool) -> Markup {
+fn render_code_block_inner(
+    info: &Option<String>,
+    text: &str,
+    has_divider: bool,
+    highlighter: &Highlighter,
+) -> Markup {
     let language = code_language(info);
     let shell_prompt = matches!(language, Some("sh" | "bash" | "fish"));
-    let highlighted = highlight::highlight_code_block(text, language, shell_prompt);
+    let highlighted = highlighter.highlight_code_block(text, language, shell_prompt);
     let language_class = language
         .map(|value| format!("language-{}", value))
         .unwrap_or_default();
