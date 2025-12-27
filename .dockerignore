@@ -1,0 +1,10 @@
+.git
+.github
+.gitignore
+target
+build
+public
+**/*.swp
+**/*.swo
+**/*.tmp
+**/*.log
