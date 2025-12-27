@@ -6,10 +6,6 @@
 
 Public repository for my blog, fully written in Rust. The server is built with Axum, templates are rendered with Maud, and styles are generated with Tailwind during `build.rs`.
 
-## Tags
-
-`rust` `axum` `maud` `tailwind` `static-assets` `blog`
-
 ## Features
 
 - Axum server with Maud templates
