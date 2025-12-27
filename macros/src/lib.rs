@@ -142,12 +142,9 @@ fn parse_post(id: String, path: &Path, manifest_dir: &Path) -> PostData {
     });
 
     let markdown = body_lines.join("\n");
-    let post_dir = path.parent().unwrap_or_else(|| {
-        panic!(
-            "post path {} missing parent directory",
-            path.display()
-        )
-    });
+    let post_dir = path
+        .parent()
+        .unwrap_or_else(|| panic!("post path {} missing parent directory", path.display()));
     copy_post_images(&id, &markdown, post_dir, manifest_dir);
 
     PostData {
@@ -175,10 +172,7 @@ fn copy_post_images(id: &str, markdown: &str, post_dir: &Path, manifest_dir: &Pa
             .extension()
             .and_then(|ext| ext.to_str())
             .unwrap_or_else(|| {
-                panic!(
-                    "post {} image {} is missing a file extension",
-                    id, dest_url
-                )
+                panic!("post {} image {} is missing a file extension", id, dest_url)
             });
         index += 1;
         let source = {

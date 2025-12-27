@@ -416,12 +416,15 @@ fn render_frame(
             RenderNode::Markup(html! {
                 figure class="flex flex-col items-center my-6" {
                     @if title.is_empty() {
-                        img class="max-w-full rounded-md border border-white/10" src=(dest_url) alt=(alt);
+                        img class="max-w-full rounded-md border border-white/10"
+                            src=(dest_url)
+                            alt=(alt);
                     } @else {
-                        img class="max-w-full rounded-md border border-white/10" src=(dest_url) alt=(alt) title=(title);
-                        figcaption class="mt-2 text-sm text-gray-400 text-center" {
-                            (title)
-                        }
+                        img class="max-w-full rounded-md border border-white/10"
+                            src=(dest_url)
+                            alt=(alt)
+                            title=(title);
+                        figcaption class="mt-2 text-sm text-gray-400 text-center" { (title) }
                     }
                 }
             })
