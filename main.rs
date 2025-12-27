@@ -7,6 +7,7 @@ use blib::pages;
 #[tokio::main(flavor = "multi_thread")]
 async fn main() {
     tracing_subscriber::fmt::init();
+    content::pre_render_posts();
 
     let app = Router::new()
         .route("/", get(pages::index))

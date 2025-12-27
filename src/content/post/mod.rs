@@ -1,7 +1,8 @@
 use crate::{common::layout, content::meta::Post, pages};
-use axum::{extract::Path, http::StatusCode};
+use axum::{extract::Path, http::StatusCode, response::Html};
 use macros::Post;
-use maud::{Markup, html};
+use maud::html;
+use std::{collections::HashMap, sync::OnceLock};
 
 mod highlight;
 mod render;
@@ -9,29 +10,38 @@ mod render;
 #[derive(Post)]
 struct Posts;
 
-fn get_post_by_id(id: &str) -> Option<&'static Post> {
-    Posts::get_published(id)
+static POST_PAGES: OnceLock<HashMap<&'static str, String>> = OnceLock::new();
+
+fn render_post_page(post: &Post) -> String {
+    let content = html! {
+        h1 class="text-5xl font-semibold tracking-tight text-white mt-10 mb-6" { (post.meta.title) }
+        (render::render_post(post))
+    };
+    layout(post.meta.title, content).into_string()
 }
 
-pub async fn get_post(Path(id): Path<String>) -> (StatusCode, Markup) {
+fn post_pages() -> &'static HashMap<&'static str, String> {
+    POST_PAGES.get_or_init(|| {
+        let mut pages = HashMap::new();
+        for post in Posts::published_posts() {
+            pages.insert(post.id, render_post_page(post));
+        }
+        pages
+    })
+}
+
+pub fn pre_render_posts() {
+    let _ = post_pages();
+}
+
+pub async fn get_post(Path(id): Path<String>) -> (StatusCode, Html<String>) {
     let id = id.to_lowercase();
-    let post = if let Some(post) = get_post_by_id(&id) {
-        post
-    } else {
-        return (StatusCode::NOT_FOUND, pages::not_found().await.1);
-    };
-    (
-        StatusCode::OK,
-        layout(
-            post.meta.title,
-            html! {
-                h1 class="text-5xl font-semibold tracking-tight text-white mt-10 mb-6" {
-                    (post.meta.title)
-                }
-                (render::render_post(post))
-            },
-        ),
-    )
+    if let Some(page) = post_pages().get(id.as_str()) {
+        return (StatusCode::OK, Html(page.clone()));
+    }
+
+    let (status, page) = pages::not_found().await;
+    (status, Html(page.into_string()))
 }
 
 pub fn get_posts() -> &'static Vec<&'static Post> {

@@ -41,6 +41,5 @@ pub struct Post {
     pub id: &'static str,
     pub meta: PostMeta,
     pub markdown: &'static str,
-    pub events: fn(
-    ) -> pulldown_cmark::TextMergeStream<'static, pulldown_cmark::Parser<'static>>,
+    pub events: fn() -> pulldown_cmark::TextMergeStream<'static, pulldown_cmark::Parser<'static>>,
 }
