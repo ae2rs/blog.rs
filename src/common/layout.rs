@@ -44,7 +44,6 @@ pub fn layout_with_head(title: &str, content: Markup, head_extras: Option<Markup
                     }
                     span class="footer-separator" { "|" }
                     a href="mailto:lucas@decastro.one" { "lucas@decastro.one" }
-                    span class="footer-separator" { "|" }
                 }
             }
         }
