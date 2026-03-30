@@ -16,7 +16,7 @@ pub async fn page() -> Markup {
         }
         p {
             "This "
-            a href="https://github.com/ae2rs/blog" { "open source" }
+            a href="https://github.com/ae2rs/blog.rs" { "open source" }
             " blog is also an excuse for me to fulfill my second passion: teaching. Personally, the way I like to learn is from "
             em { "someone" }
             " instead of "
