@@ -30,7 +30,9 @@ pub async fn page(posts: &[&'static Post]) -> Markup {
                 alt="Portrait of Lucas de Castro"
                 class="size-32 shrink-0 rounded-full border-4 border-white/20 object-cover";
             p class="m-0 text-base leading-relaxed" {
-                "Hey, I'm Lucas de Castro. I'm a backend software engineer, and this "
+                "Hey, I'm Lucas de Castro. I'm a backend software engineer at "
+                a href="https://amo.co/" { "amo" }
+                ", and this "
                 a href="https://github.com/ae2rs/blog.rs" { "open source" }
                 " blog is where I (irregularly) post about pretty much anything I find interesting."
                 br;
