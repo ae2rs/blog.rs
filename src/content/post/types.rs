@@ -86,5 +86,6 @@ pub enum FrameKind {
 #[derive(Debug)]
 pub enum RenderNode {
     Markup(Markup),
+    BlockQuote { buffer: Vec<RenderNode> },
     CodeBlock { info: Option<String>, text: String },
 }
