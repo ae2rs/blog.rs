@@ -319,7 +319,7 @@ pub fn derive_post(input: TokenStream) -> TokenStream {
             }
 
             pub fn get_published(title: &str) -> Option<&'static super::types::Post> {
-                Self::get(title).filter(|post| !post.meta.draft)
+                Self::get(title).filter(|post| !post.meta.draft || cfg!(debug_assertions))
             }
 
             pub fn published_posts(
@@ -329,7 +329,7 @@ pub fn derive_post(input: TokenStream) -> TokenStream {
                 > = std::sync::OnceLock::new();
                 POSTS.get_or_init(|| {
                     let mut posts = Self::iter()
-                        .filter(|post| !post.meta.draft)
+                        .filter(|post| !post.meta.draft || cfg!(debug_assertions))
                         .collect::<Vec<_>>();
                     posts.sort_by_key(|post| std::cmp::Reverse(post.meta.published));
                     posts
