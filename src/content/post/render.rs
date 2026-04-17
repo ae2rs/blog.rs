@@ -355,6 +355,10 @@ fn render_nodes(buffer: &[RenderNode], highlighter: &Highlighter) -> Markup {
                 });
                 idx += 1;
             }
+            RenderNode::Paragraph { content } => {
+                rendered.push(render_paragraph(content));
+                idx += 1;
+            }
             RenderNode::BlockQuote { .. } => {
                 let start = idx;
                 while idx < buffer.len() {
@@ -401,9 +405,9 @@ fn render_frame(
 ) -> RenderNode {
     match frame.kind {
         FrameKind::Root => RenderNode::Markup(render_nodes(&frame.buffer, highlighter)),
-        FrameKind::Paragraph => RenderNode::Markup(html! {
-            p class="text-gray-300 mt-4 first:mt-0" { (render_nodes(&frame.buffer, highlighter)) }
-        }),
+        FrameKind::Paragraph => RenderNode::Paragraph {
+            content: render_nodes(&frame.buffer, highlighter).into_string(),
+        },
         FrameKind::Heading(level) => match level {
             HeadingLevel::H1 => render_heading(
                 "h1",
@@ -669,16 +673,52 @@ fn render_callout(
     }
 }
 
+fn render_paragraph(content: &str) -> Markup {
+    html! {
+        p class="text-gray-300 mt-4 first:mt-0" {
+            (PreEscaped(content))
+        }
+    }
+}
+
 fn render_blockquote_group(run: &[RenderNode], highlighter: &Highlighter) -> Markup {
+    let mut content_nodes = Vec::new();
+    for node in run {
+        if let RenderNode::BlockQuote { buffer } = node {
+            for child in buffer {
+                content_nodes.push(child);
+            }
+        }
+    }
+
+    let footer_html = content_nodes.last().and_then(|node| match node {
+        RenderNode::Paragraph { content } => strip_quote_footer_prefix(content),
+        _ => None,
+    });
+
     html! {
         blockquote class="my-6 border-l-2 border-white/15 pl-5 text-[1.03rem] leading-8 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_p]:italic [&_p]:text-gray-200/90 [&_p]:leading-8 [&_p]:tracking-[0.01em] [&_strong]:text-white [&_ul]:text-gray-200/90 [&_ol]:text-gray-200/90 [&_li]:italic [&_li]:text-gray-200/90 [&_p+ul]:mt-4 [&_p+ol]:mt-4" {
-            @for node in run {
-                @if let RenderNode::BlockQuote { buffer } = node {
-                    (render_nodes(buffer, highlighter))
+            @for node in content_nodes.iter().take(content_nodes.len().saturating_sub(usize::from(footer_html.is_some()))) {
+                @match node {
+                    RenderNode::Markup(markup) => { (markup) }
+                    RenderNode::Paragraph { content } => { (render_paragraph(content)) }
+                    RenderNode::BlockQuote { buffer } => { (render_nodes(buffer, highlighter)) }
+                    RenderNode::CodeBlock { info, text } => { (render_code_block(info, text, highlighter)) }
+                }
+            }
+            @if let Some(footer_html) = footer_html {
+                footer class="mt-4 text-sm not-italic tracking-[0.03em] text-gray-400 [&_a]:text-gray-300 [&_a:hover]:text-white [&_strong]:text-gray-200" {
+                    (PreEscaped(footer_html))
                 }
             }
         }
     }
+}
+
+fn strip_quote_footer_prefix(content: &str) -> Option<&str> {
+    content
+        .strip_prefix("-- ")
+        .or_else(|| content.strip_prefix("— "))
 }
 
 fn render_code_block(info: &Option<String>, text: &str, highlighter: &Highlighter) -> Markup {
@@ -801,6 +841,26 @@ mod tests {
         assert!(html.contains("Quoted intro"));
         assert!(html.contains("Heading"));
         assert!(html.contains("<ul class=\"list-disc"));
+    }
+
+    #[test]
+    fn renders_quote_footer_from_final_paragraph() {
+        let html = render("> Quoted line\n>\n> -- Burton Bloom");
+
+        assert_eq!(count_matches(&html, "<blockquote"), 1);
+        assert!(html.contains("Quoted line"));
+        assert!(html.contains("<footer"));
+        assert!(html.contains("Burton Bloom"));
+        assert!(!html.contains("-- Burton Bloom</p>"));
+    }
+
+    #[test]
+    fn renders_quote_footer_with_inline_markdown() {
+        let html = render("> Quoted line\n>\n> -- [Burton Bloom](/authors/burton)");
+
+        assert!(html.contains("<footer"));
+        assert!(html.contains("href=\"/authors/burton\""));
+        assert!(!html.contains("-- <a"));
     }
 
     #[test]
