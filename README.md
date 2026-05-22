@@ -32,6 +32,16 @@ cargo run
 
 Then open `http://0.0.0.0:3000`.
 
+## Local development
+
+Use the helper script for automatic restarts while you edit Rust, content, styles, or assets:
+
+```sh
+./scripts/dev.sh
+```
+
+If `cargo-watch` is installed, the script uses it. Otherwise it falls back to a small polling watcher.
+
 ## Build
 
 ```sh

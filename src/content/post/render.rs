@@ -1,29 +1,115 @@
 use maud::{Markup, PreEscaped, html};
-use pulldown_cmark::{CodeBlockKind, CowStr, Event, HeadingLevel, Tag};
+use pulldown_cmark::{CodeBlockKind, CowStr, Event, HeadingLevel, Parser, Tag, TextMergeStream};
 use std::{collections::HashMap, path::Path};
 
 use super::types::{Frame, FrameKind, Post, RenderNode};
 use crate::{component::icons, content::format::highlight::Highlighter};
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum CalloutKind {
+    Note,
+    Warning,
+    Danger,
+}
+
+impl CalloutKind {
+    fn from_code_block(info: &Option<String>) -> Option<Self> {
+        match code_language(info) {
+            Some(language) if language.eq_ignore_ascii_case("note") => Some(Self::Note),
+            Some(language) if language.eq_ignore_ascii_case("warning") => Some(Self::Warning),
+            Some(language) if language.eq_ignore_ascii_case("danger") => Some(Self::Danger),
+            _ => None,
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            Self::Note => "Note",
+            Self::Warning => "Warning",
+            Self::Danger => "Danger",
+        }
+    }
+
+    fn icon(self) -> &'static str {
+        match self {
+            Self::Note => icons::NOTE,
+            Self::Warning => icons::WARNING,
+            Self::Danger => icons::DANGER,
+        }
+    }
+
+    fn panel_classes(self) -> &'static str {
+        match self {
+            Self::Note => {
+                "my-6 rounded-2xl border border-sky-400/30 bg-sky-400/10 px-4 py-4 shadow-sm shadow-sky-950/20"
+            }
+            Self::Warning => {
+                "my-6 rounded-2xl border border-amber-400/35 bg-amber-300/10 px-4 py-4 shadow-sm shadow-amber-950/20"
+            }
+            Self::Danger => {
+                "my-6 rounded-2xl border border-red-400/35 bg-red-400/10 px-4 py-4 shadow-sm shadow-red-950/20"
+            }
+        }
+    }
+
+    fn icon_classes(self) -> &'static str {
+        match self {
+            Self::Note => {
+                "flex size-8 shrink-0 items-center justify-center rounded-full bg-sky-300/15 text-sky-100"
+            }
+            Self::Warning => {
+                "flex size-8 shrink-0 items-center justify-center rounded-full bg-amber-300/20 text-amber-100"
+            }
+            Self::Danger => {
+                "flex size-8 shrink-0 items-center justify-center rounded-full bg-red-300/20 text-red-100"
+            }
+        }
+    }
+
+    fn title_classes(self) -> &'static str {
+        match self {
+            Self::Note => "text-sm font-semibold tracking-[0.08em] uppercase text-sky-100",
+            Self::Warning => "text-sm font-semibold tracking-[0.08em] uppercase text-amber-100",
+            Self::Danger => "text-sm font-semibold tracking-[0.08em] uppercase text-red-100",
+        }
+    }
+}
+
 pub fn render_post(post: &Post, highlighter: &Highlighter) -> Markup {
+    let mut slug_counts = HashMap::new();
+    let mut image_index = 0usize;
+
+    render_markdown(
+        (post.events)(),
+        &mut slug_counts,
+        post.id,
+        &mut image_index,
+        highlighter,
+    )
+}
+
+fn render_markdown<'a, I>(
+    events: I,
+    slug_counts: &mut HashMap<String, usize>,
+    post_id: &str,
+    image_index: &mut usize,
+    highlighter: &Highlighter,
+) -> Markup
+where
+    I: IntoIterator<Item = Event<'a>>,
+{
     let mut frames = vec![Frame {
         kind: FrameKind::Root,
         buffer: Vec::new(),
         text: String::new(),
     }];
-    let mut slug_counts = HashMap::new();
-    let mut image_index = 0usize;
 
-    for event in (post.events)() {
+    for event in events {
         match event {
             Event::Start(tag) => handle_start_event(tag, &mut frames),
-            Event::End(_) => handle_end_event(
-                &mut frames,
-                &mut slug_counts,
-                post.id,
-                &mut image_index,
-                highlighter,
-            ),
+            Event::End(_) => {
+                handle_end_event(&mut frames, slug_counts, post_id, image_index, highlighter)
+            }
             Event::Text(text) => handle_text_event(text, &mut frames),
             Event::Code(code) => handle_code_event(code, &mut frames),
             Event::InlineMath(text) => handle_inline_math_event(text, &mut frames),
@@ -42,6 +128,22 @@ pub fn render_post(post: &Post, highlighter: &Highlighter) -> Markup {
         .pop()
         .expect("render_post should always keep a root frame");
     render_nodes(&root.buffer, highlighter)
+}
+
+fn render_markdown_fragment(
+    markdown: &str,
+    slug_counts: &mut HashMap<String, usize>,
+    post_id: &str,
+    image_index: &mut usize,
+    highlighter: &Highlighter,
+) -> Markup {
+    render_markdown(
+        TextMergeStream::new(Parser::new(markdown)),
+        slug_counts,
+        post_id,
+        image_index,
+        highlighter,
+    )
 }
 
 fn handle_start_event(tag: Tag, frames: &mut Vec<Frame>) {
@@ -253,6 +355,21 @@ fn render_nodes(buffer: &[RenderNode], highlighter: &Highlighter) -> Markup {
                 });
                 idx += 1;
             }
+            RenderNode::Paragraph { content } => {
+                rendered.push(render_paragraph(content));
+                idx += 1;
+            }
+            RenderNode::BlockQuote { .. } => {
+                let start = idx;
+                while idx < buffer.len() {
+                    if matches!(buffer[idx], RenderNode::BlockQuote { .. }) {
+                        idx += 1;
+                    } else {
+                        break;
+                    }
+                }
+                rendered.push(render_blockquote_group(&buffer[start..idx], highlighter));
+            }
             RenderNode::CodeBlock { .. } => {
                 let start = idx;
                 while idx < buffer.len() {
@@ -288,9 +405,9 @@ fn render_frame(
 ) -> RenderNode {
     match frame.kind {
         FrameKind::Root => RenderNode::Markup(render_nodes(&frame.buffer, highlighter)),
-        FrameKind::Paragraph => RenderNode::Markup(html! {
-            p class="text-gray-300 mt-4 first:mt-0" { (render_nodes(&frame.buffer, highlighter)) }
-        }),
+        FrameKind::Paragraph => RenderNode::Paragraph {
+            content: render_nodes(&frame.buffer, highlighter).into_string(),
+        },
         FrameKind::Heading(level) => match level {
             HeadingLevel::H1 => render_heading(
                 "h1",
@@ -314,10 +431,23 @@ fn render_frame(
                 highlighter,
             ),
         },
-        FrameKind::BlockQuote => RenderNode::Markup(html! {
-            blockquote class="text-gray-300" { (render_nodes(&frame.buffer, highlighter)) }
-        }),
-        FrameKind::CodeBlock { info, text } => RenderNode::CodeBlock { info, text },
+        FrameKind::BlockQuote => RenderNode::BlockQuote {
+            buffer: frame.buffer,
+        },
+        FrameKind::CodeBlock { info, text } => {
+            if let Some(kind) = CalloutKind::from_code_block(&info) {
+                RenderNode::Markup(render_callout(
+                    kind,
+                    &text,
+                    slug_counts,
+                    post_id,
+                    image_index,
+                    highlighter,
+                ))
+            } else {
+                RenderNode::CodeBlock { info, text }
+            }
+        }
         FrameKind::List(start) => match start {
             Some(start) => RenderNode::Markup(html! {
                 ol class="list-decimal pl-6 space-y-2 text-gray-300 mb-4" start=(start) {
@@ -516,6 +646,81 @@ fn is_local_image(dest_url: &str) -> bool {
     !dest_url.contains("://")
 }
 
+fn render_callout(
+    kind: CalloutKind,
+    text: &str,
+    slug_counts: &mut HashMap<String, usize>,
+    post_id: &str,
+    image_index: &mut usize,
+    highlighter: &Highlighter,
+) -> Markup {
+    let content = render_markdown_fragment(text, slug_counts, post_id, image_index, highlighter);
+
+    html! {
+        aside class=(kind.panel_classes()) {
+            div class="flex items-center gap-3" {
+                span class=(kind.icon_classes()) {
+                    (PreEscaped(kind.icon()))
+                }
+                span class=(kind.title_classes()) {
+                    (kind.label())
+                }
+            }
+            div class="mt-3 text-sm leading-7 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_p]:text-gray-100 [&_ul]:text-gray-100 [&_ol]:text-gray-100 [&_li]:text-gray-100 [&_blockquote]:my-4 [&_a:hover]:text-white [&_code]:bg-black/20 [&_code]:text-white" {
+                (content)
+            }
+        }
+    }
+}
+
+fn render_paragraph(content: &str) -> Markup {
+    html! {
+        p class="text-gray-300 mt-4 first:mt-0" {
+            (PreEscaped(content))
+        }
+    }
+}
+
+fn render_blockquote_group(run: &[RenderNode], highlighter: &Highlighter) -> Markup {
+    let mut content_nodes = Vec::new();
+    for node in run {
+        if let RenderNode::BlockQuote { buffer } = node {
+            for child in buffer {
+                content_nodes.push(child);
+            }
+        }
+    }
+
+    let footer_html = content_nodes.last().and_then(|node| match node {
+        RenderNode::Paragraph { content } => strip_quote_footer_prefix(content),
+        _ => None,
+    });
+
+    html! {
+        blockquote class="my-6 border-l-2 border-white/15 pl-5 text-[1.03rem] leading-8 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_p]:italic [&_p]:text-gray-200/90 [&_p]:leading-8 [&_p]:tracking-[0.01em] [&_strong]:text-white [&_ul]:text-gray-200/90 [&_ol]:text-gray-200/90 [&_li]:italic [&_li]:text-gray-200/90 [&_p+ul]:mt-4 [&_p+ol]:mt-4" {
+            @for node in content_nodes.iter().take(content_nodes.len().saturating_sub(usize::from(footer_html.is_some()))) {
+                @match node {
+                    RenderNode::Markup(markup) => { (markup) }
+                    RenderNode::Paragraph { content } => { (render_paragraph(content)) }
+                    RenderNode::BlockQuote { buffer } => { (render_nodes(buffer, highlighter)) }
+                    RenderNode::CodeBlock { info, text } => { (render_code_block(info, text, highlighter)) }
+                }
+            }
+            @if let Some(footer_html) = footer_html {
+                footer class="mt-4 text-sm not-italic tracking-[0.03em] text-gray-400 [&_a]:text-gray-300 [&_a:hover]:text-white [&_strong]:text-gray-200" {
+                    (PreEscaped(footer_html))
+                }
+            }
+        }
+    }
+}
+
+fn strip_quote_footer_prefix(content: &str) -> Option<&str> {
+    content
+        .strip_prefix("-- ")
+        .or_else(|| content.strip_prefix("— "))
+}
+
 fn render_code_block(info: &Option<String>, text: &str, highlighter: &Highlighter) -> Markup {
     let language = code_language(info);
     let shell_prompt = matches!(language, Some("sh" | "bash" | "fish"));
@@ -594,4 +799,114 @@ fn code_language(info: &Option<String>) -> Option<&str> {
     info.as_deref()
         .and_then(|value| value.split_whitespace().next())
         .filter(|value| !value.is_empty())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn render(markdown: &str) -> String {
+        let highlighter = Highlighter::default();
+        let mut slug_counts = HashMap::new();
+        let mut image_index = 0usize;
+
+        render_markdown_fragment(
+            markdown,
+            &mut slug_counts,
+            "test-post",
+            &mut image_index,
+            &highlighter,
+        )
+        .into_string()
+    }
+
+    fn count_matches(haystack: &str, needle: &str) -> usize {
+        haystack.matches(needle).count()
+    }
+
+    #[test]
+    fn renders_styled_blockquotes() {
+        let html = render("> Quoted line");
+
+        assert!(html.contains("<blockquote"));
+        assert!(html.contains("border-l-2 border-white/15"));
+        assert!(html.contains("Quoted line"));
+    }
+
+    #[test]
+    fn merges_adjacent_blockquote_segments_for_lists() {
+        let html = render("> Quoted intro\n> Heading\n\n> - one\n> - two");
+
+        assert_eq!(count_matches(&html, "<blockquote"), 1);
+        assert!(html.contains("Quoted intro"));
+        assert!(html.contains("Heading"));
+        assert!(html.contains("<ul class=\"list-disc"));
+    }
+
+    #[test]
+    fn renders_quote_footer_from_final_paragraph() {
+        let html = render("> Quoted line\n>\n> -- Burton Bloom");
+
+        assert_eq!(count_matches(&html, "<blockquote"), 1);
+        assert!(html.contains("Quoted line"));
+        assert!(html.contains("<footer"));
+        assert!(html.contains("Burton Bloom"));
+        assert!(!html.contains("-- Burton Bloom</p>"));
+    }
+
+    #[test]
+    fn renders_quote_footer_with_inline_markdown() {
+        let html = render("> Quoted line\n>\n> -- [Burton Bloom](/authors/burton)");
+
+        assert!(html.contains("<footer"));
+        assert!(html.contains("href=\"/authors/burton\""));
+        assert!(!html.contains("-- <a"));
+    }
+
+    #[test]
+    fn renders_note_callouts_with_markdown_content() {
+        let html =
+            render("```note\nA *small* [note](/note) with `inline` code.\n\n- one\n- two\n```");
+
+        assert!(html.contains("<aside"));
+        assert!(html.contains("border-sky-400/30"));
+        assert!(html.contains(">Note<"));
+        assert!(html.contains("<em>small</em>"));
+        assert!(html.contains("href=\"/note\""));
+        assert!(html.contains("code class=\"text-[0.95em] bg-white/10"));
+        assert!(html.contains("<ul class=\"list-disc"));
+        assert_eq!(count_matches(&html, "code-copy-btn"), 0);
+    }
+
+    #[test]
+    fn renders_warning_and_danger_callouts() {
+        let html = render("```warning\nHeads up.\n```\n\n```danger\nStop now.\n```");
+
+        assert!(html.contains("border-amber-400/35"));
+        assert!(html.contains(">Warning<"));
+        assert!(html.contains("border-red-400/35"));
+        assert!(html.contains(">Danger<"));
+    }
+
+    #[test]
+    fn keeps_regular_code_blocks_unchanged() {
+        let html = render("```rust\nfn main() {}\n```");
+
+        assert!(html.contains("code-copy-btn"));
+        assert!(html.contains("language-rust"));
+        assert!(!html.contains("<aside"));
+    }
+
+    #[test]
+    fn does_not_group_notes_with_code_blocks() {
+        let html = render(
+            "```rust\nfn before() {}\n```\n\n```note\nBetween\n```\n\n```bash\necho hi\n```",
+        );
+
+        assert!(html.contains("language-rust"));
+        assert!(html.contains("language-bash"));
+        assert!(html.contains(">Note<"));
+        assert_eq!(count_matches(&html, "code-copy-btn"), 2);
+        assert_eq!(count_matches(&html, "<aside"), 1);
+    }
 }

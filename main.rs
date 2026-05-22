@@ -25,5 +25,7 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
         .await
         .expect("failed to bind");
+    let local_addr = listener.local_addr().expect("failed to get local address");
+    println!("blog running at http://localhost:{}", local_addr.port());
     axum::serve(listener, app).await.expect("failed to serve");
 }
