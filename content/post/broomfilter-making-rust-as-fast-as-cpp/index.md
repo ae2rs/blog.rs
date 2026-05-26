@@ -1,5 +1,5 @@
 ---
-title: 'Broomfilter: making Rust faster than C'
+title: 'Broomfilter: making Rust as fast as C++'
 published: 2026-04-12
 draft: false
 ---
