@@ -1,5 +1,7 @@
 use maud::{Markup, PreEscaped, html};
-use pulldown_cmark::{CodeBlockKind, CowStr, Event, HeadingLevel, Parser, Tag, TextMergeStream};
+use pulldown_cmark::{
+    CodeBlockKind, CowStr, Event, HeadingLevel, Options, Parser, Tag, TextMergeStream,
+};
 use std::{collections::HashMap, path::Path};
 
 use super::types::{Frame, FrameKind, Post, RenderNode};
@@ -138,7 +140,7 @@ fn render_markdown_fragment(
     highlighter: &Highlighter,
 ) -> Markup {
     render_markdown(
-        TextMergeStream::new(Parser::new(markdown)),
+        TextMergeStream::new(Parser::new_ext(markdown, Options::ENABLE_TABLES)),
         slug_counts,
         post_id,
         image_index,
@@ -179,7 +181,17 @@ fn handle_start_event(tag: Tag, frames: &mut Vec<Frame>) {
         Tag::Table(_) => FrameKind::Table,
         Tag::TableHead => FrameKind::TableHead,
         Tag::TableRow => FrameKind::TableRow,
-        Tag::TableCell => FrameKind::TableCell,
+        Tag::TableCell => {
+            let in_head = frames
+                .iter()
+                .rev()
+                .any(|f| matches!(f.kind, FrameKind::TableHead));
+            if in_head {
+                FrameKind::TableHeadCell
+            } else {
+                FrameKind::TableCell
+            }
+        }
         _ => FrameKind::Root,
     };
 
@@ -525,16 +537,31 @@ fn render_frame(
             })
         }
         FrameKind::Table => RenderNode::Markup(html! {
-            table { (render_nodes(&frame.buffer, highlighter)) }
+            div class="my-6 w-full overflow-x-auto rounded-xl border border-white/10" {
+                table class="w-full border-collapse text-sm" {
+                    (render_nodes(&frame.buffer, highlighter))
+                }
+            }
         }),
         FrameKind::TableHead => RenderNode::Markup(html! {
-            thead { (render_nodes(&frame.buffer, highlighter)) }
+            thead class="bg-white/5" {
+                (render_nodes(&frame.buffer, highlighter))
+            }
         }),
         FrameKind::TableRow => RenderNode::Markup(html! {
-            tr { (render_nodes(&frame.buffer, highlighter)) }
+            tr class="even:bg-white/[0.03]" {
+                (render_nodes(&frame.buffer, highlighter))
+            }
+        }),
+        FrameKind::TableHeadCell => RenderNode::Markup(html! {
+            th class="px-4 py-3.5 text-left font-semibold text-white border-b border-white/15" {
+                (render_nodes(&frame.buffer, highlighter))
+            }
         }),
         FrameKind::TableCell => RenderNode::Markup(html! {
-            td { (render_nodes(&frame.buffer, highlighter)) }
+            td class="px-4 py-3.5 text-gray-300 border-b border-white/[0.08] [tr:last-child_&]:border-0" {
+                (render_nodes(&frame.buffer, highlighter))
+            }
         }),
     }
 }
@@ -886,6 +913,17 @@ mod tests {
         assert!(html.contains(">Warning<"));
         assert!(html.contains("border-red-400/35"));
         assert!(html.contains(">Danger<"));
+    }
+
+    #[test]
+    fn renders_styled_tables() {
+        let html = render("| A | B |\n|---|---|\n| 1 | 2 |");
+        assert!(html.contains("<table"));
+        assert!(html.contains("<th "));
+        assert!(html.contains("<td "));
+        assert!(html.contains("border-white/10"));
+        assert!(html.contains("A"));
+        assert!(html.contains("1"));
     }
 
     #[test]

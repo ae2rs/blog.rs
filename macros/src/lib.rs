@@ -288,7 +288,10 @@ pub fn derive_post(input: TokenStream) -> TokenStream {
                     markdown: #markdown_lit,
                     events: || {
                         ::pulldown_cmark::TextMergeStream::new(
-                            ::pulldown_cmark::Parser::new(#markdown_lit),
+                            ::pulldown_cmark::Parser::new_ext(
+                                #markdown_lit,
+                                ::pulldown_cmark::Options::ENABLE_TABLES,
+                            ),
                         )
                     },
                 },

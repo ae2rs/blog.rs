@@ -81,6 +81,7 @@ pub enum FrameKind {
     TableHead,
     TableRow,
     TableCell,
+    TableHeadCell,
 }
 
 #[derive(Debug)]
