@@ -8,6 +8,12 @@ pub struct Date {
     pub day: u8,
 }
 
+impl std::fmt::Display for Date {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:04}-{:02}-{:02}", self.year, self.month, self.day)
+    }
+}
+
 impl Ord for Date {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         self.year.cmp(&other.year).then_with(|| {

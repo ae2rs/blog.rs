@@ -37,8 +37,10 @@ impl PostState {
 }
 
 fn render_post_page(post: &Post, highlighter: &Highlighter) -> String {
+    let published = post.meta.published.to_string();
     let content = html! {
-        h1 class="text-5xl font-semibold tracking-tight text-white mt-10 mb-6" { (post.meta.title) }
+        h1 class="text-5xl font-semibold tracking-tight text-white mt-10 mb-2" { (post.meta.title) }
+        time class="block mb-6 text-sm text-gray-500" datetime=(published) { (published) }
         (render::render_post(post, highlighter))
     };
     let head_extras = html! {
