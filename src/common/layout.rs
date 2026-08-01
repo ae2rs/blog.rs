@@ -35,12 +35,18 @@ pub fn layout_with_head(title: &str, content: Markup, head_extras: Option<Markup
                 footer
                     class="site-footer mt-10 py-6 text-base sm:text-sm text-gray-400 flex flex-wrap justify-center text-center"
                 {
-                    a   href="https://bsky.app/profile/ae2.rs"
+                    a   href="https://www.linkedin.com/in/lucas-de-castro-swe/"
                         target="_blank"
                         rel="noopener noreferrer"
                     {
-                        "ae2.rs "
-                        span class="footer-extra" { "on Bluesky" }
+                        "linkedin"
+                    }
+                    span class="footer-separator" { "|" }
+                    a   href="https://github.com/ae2rs/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    {
+                        "github"
                     }
                     span class="footer-separator" { "|" }
                     a href="mailto:lucas@decastro.one" { "lucas@decastro.one" }
