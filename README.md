@@ -27,46 +27,52 @@ Public repository for my blog, fully written in Rust. The server is built with A
 ## Quickstart
 
 ```sh
-cargo run
+make run
 ```
 
 Then open `http://0.0.0.0:3000`.
 
 ## Local development
 
-Use the helper script for automatic restarts while you edit Rust, content, styles, or assets:
+`make` lists every target. The one you want day to day is:
 
 ```sh
-./scripts/dev.sh
+make dev
 ```
 
-If `cargo-watch` is installed, the script uses it. Otherwise it falls back to a small polling watcher.
+It rebuilds and restarts the server whenever Rust, content, styles, or assets change. Posts are
+baked in at compile time by the `Post` derive macro, so a content edit means a full rebuild — there
+is no in-process reload. Requires `cargo-watch` (`cargo install cargo-watch`); the browser still
+needs a manual refresh.
 
 ## Build
 
 ```sh
-cargo build
+make build      # debug
+make release    # optimized
 ```
 
-This runs `build.rs`, which generates the minified Tailwind CSS using the binary in `vendor/tailwind/`.
+Both run `build.rs`, which generates the minified Tailwind CSS using the binary in `vendor/tailwind/`.
 
 ## Test
 
 ```sh
-cargo test
+make test
 ```
 
 ## Lint
 
 ```sh
-cargo fmt --all -- --check
-cargo clippy --all-targets --all-features -- -D warnings
+make fmt        # format in place
+make lint       # clippy, warnings denied
+make ci         # fmt-check + check + lint + test, same as the CI workflow
 ```
 
 ## Docker
 
 ```sh
-docker compose up --build
+make up         # docker compose up --build
+make down       # docker compose down
 ```
 
 ## License
