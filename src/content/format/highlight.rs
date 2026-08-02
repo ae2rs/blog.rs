@@ -53,6 +53,7 @@ impl Highlighter {
         let mut highlighter = HighlightLines::new(syntax, &self.theme);
         let mut output = String::new();
         let mut lines = LinesWithEndings::from(code).peekable();
+        let mut continuation = false;
 
         while let Some(line) = lines.next() {
             let ranges = highlighter
@@ -64,14 +65,29 @@ impl Highlighter {
             if shell_prompt {
                 let trimmed = line.trim_end_matches('\n');
                 let is_trailing_empty = trimmed.trim().is_empty() && lines.peek().is_none();
-                if trimmed.trim().is_empty() && !is_trailing_empty {
-                    output.push_str("<span class=\"block\">&nbsp;</span>");
-                } else if !trimmed.trim().is_empty() {
+                if trimmed.trim().is_empty() {
+                    if !is_trailing_empty {
+                        output.push_str("<span class=\"block\">&nbsp;</span>");
+                    }
+                    continuation = false;
+                } else {
                     let line_without_newline = html_line.replace('\n', "");
-                    output.push_str(&format!(
-                        "<span class=\"block before:content-['$'] before:mr-2 before:text-white/50\">{}</span>",
-                        line_without_newline
-                    ));
+                    if continuation {
+                        output.push_str(&format!(
+                            "<span class=\"block\">{}</span>",
+                            line_without_newline
+                        ));
+                    } else {
+                        output.push_str(&format!(
+                            "<span class=\"block before:content-['$'] before:mr-2 before:text-white/50\">{}</span>",
+                            line_without_newline
+                        ));
+                    }
+                    let end = trimmed.trim_end();
+                    continuation = end.ends_with('\\')
+                        || end.ends_with("&&")
+                        || end.ends_with("||")
+                        || end.ends_with('|');
                 }
             } else {
                 output.push_str(&html_line);
@@ -134,6 +150,25 @@ mod tests {
             colors.len() >= 3,
             "expected at least 3 colors, got {colors:?}"
         );
+    }
+
+    #[test]
+    fn shell_prompt_skips_continuation_lines() {
+        let code = "rustup component add llvm-tools-preview \\\n  && cargo build --release \\\n     --target \"$TARGET\"\necho done\n";
+        let html = Highlighter::new().highlight_code_block(code, Some("bash"), true);
+        let prompts = html.matches("before:content-['$']").count();
+        assert_eq!(
+            prompts, 2,
+            "only command-starting lines get a prompt: {html}"
+        );
+    }
+
+    #[test]
+    fn shell_prompt_resumes_after_operator_and_blank_line() {
+        let code = "cargo build &&\ncargo test\n\ncargo run\n";
+        let html = Highlighter::new().highlight_code_block(code, Some("bash"), true);
+        let prompts = html.matches("before:content-['$']").count();
+        assert_eq!(prompts, 2, "`&&` continues, blank line resets: {html}");
     }
 
     #[test]
