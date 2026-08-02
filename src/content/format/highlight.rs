@@ -2,7 +2,7 @@ use syntect::{
     easy::HighlightLines,
     highlighting::Theme,
     html::{IncludeBackground, styled_line_to_highlighted_html},
-    parsing::SyntaxSet,
+    parsing::{SyntaxSet, syntax_definition::SyntaxDefinition},
     util::LinesWithEndings,
 };
 
@@ -13,7 +13,17 @@ pub struct Highlighter {
 
 impl Highlighter {
     pub fn new() -> Self {
-        let syntax_set = SyntaxSet::load_defaults_newlines();
+        let mut builder = SyntaxSet::load_defaults_newlines().into_builder();
+        for source in [
+            include_str!("../../../syntaxes/llvm.sublime-syntax"),
+            include_str!("../../../syntaxes/aarch64.sublime-syntax"),
+            include_str!("../../../syntaxes/toml.sublime-syntax"),
+        ] {
+            let syntax = SyntaxDefinition::load_from_str(source, true, None)
+                .expect("vendored sublime-syntax should parse");
+            builder.add(syntax);
+        }
+        let syntax_set = builder.build();
         let themes = syntect::highlighting::ThemeSet::load_defaults();
         let theme = themes
             .themes
@@ -75,5 +85,66 @@ impl Highlighter {
 impl Default for Highlighter {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashSet;
+
+    fn distinct_colors(html: &str) -> HashSet<&str> {
+        html.match_indices("style=\"color:#")
+            .map(|(i, _)| &html[i + 14..i + 20])
+            .collect()
+    }
+
+    #[test]
+    fn highlights_llvm_blocks_with_multiple_colors() {
+        let code = "; comment\ndefine i64 @known(i64 %x) {\nstart:\n  %r = add i64 %x, 1\n  ret i64 %r\n}\n";
+        let html = Highlighter::new().highlight_code_block(code, Some("llvm"), false);
+        let colors = distinct_colors(&html);
+        assert!(
+            colors.len() >= 4,
+            "expected at least 4 colors, got {colors:?}"
+        );
+        assert!(
+            colors.contains("65737e"),
+            "comment gray missing: {colors:?}"
+        );
+    }
+
+    #[test]
+    fn highlights_asm_blocks_with_multiple_colors() {
+        let code = "__ZN6devirt7unknown17h..E:\n    ldr x3, [x1, #24]  ; the apply slot\n    ret\n";
+        let html = Highlighter::new().highlight_code_block(code, Some("asm"), false);
+        let colors = distinct_colors(&html);
+        assert!(
+            colors.len() >= 3,
+            "expected at least 3 colors, got {colors:?}"
+        );
+    }
+
+    #[test]
+    fn highlights_toml_blocks_with_multiple_colors() {
+        let code = "[profile.release]\nopt-level = 3\nlto = \"fat\"\ncodegen-units = 1\n";
+        let html = Highlighter::new().highlight_code_block(code, Some("toml"), false);
+        let colors = distinct_colors(&html);
+        assert!(
+            colors.len() >= 3,
+            "expected at least 3 colors, got {colors:?}"
+        );
+    }
+
+    #[test]
+    fn unknown_language_falls_back_to_plain_text() {
+        let html = Highlighter::new().highlight_code_block("hello world\n", Some("qqqq"), false);
+        let colors = distinct_colors(&html);
+        assert_eq!(
+            colors.len(),
+            1,
+            "plain text should be one color: {colors:?}"
+        );
+        assert!(colors.contains("c0c5ce"));
     }
 }

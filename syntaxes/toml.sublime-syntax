@@ -1,0 +1,20 @@
+%YAML 1.2
+---
+name: TOML
+file_extensions:
+  - toml
+scope: source.toml
+contexts:
+  main:
+    - match: '#.*$'
+      scope: comment.line.number-sign.toml
+    - match: '^\s*\[[^\]]*\]'
+      scope: entity.name.function.toml
+    - match: '"[^"]*"'
+      scope: string.quoted.double.toml
+    - match: '\b(true|false)\b'
+      scope: constant.language.toml
+    - match: '-?\b\d+(\.\d+)?\b'
+      scope: constant.numeric.toml
+    - match: '^\s*[\w.-]+(?=\s*=)'
+      scope: variable.other.toml

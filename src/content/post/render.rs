@@ -951,6 +951,18 @@ mod tests {
     }
 
     #[test]
+    fn highlights_llvm_code_blocks() {
+        let html = render("```llvm\ndefine i64 @f(i64 %x) {\n  ret i64 %x\n}\n```");
+
+        assert!(html.contains("language-llvm"));
+        let colors: std::collections::HashSet<&str> = html
+            .match_indices("style=\"color:#")
+            .map(|(i, _)| &html[i + 14..i + 20])
+            .collect();
+        assert!(colors.len() > 1, "expected multiple colors, got {colors:?}");
+    }
+
+    #[test]
     fn does_not_group_notes_with_code_blocks() {
         let html = render(
             "```rust\nfn before() {}\n```\n\n```note\nBetween\n```\n\n```bash\necho hi\n```",

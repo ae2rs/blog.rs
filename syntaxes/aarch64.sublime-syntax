@@ -1,0 +1,23 @@
+%YAML 1.2
+---
+name: AArch64 Assembly
+file_extensions:
+  - asm
+  - aarch64
+scope: source.asm.aarch64
+contexts:
+  main:
+    - match: '(;|//).*$'
+      scope: comment.line.asm
+    - match: '^\s*[A-Za-z_.$][\w.$]*:'
+      scope: entity.name.function.asm
+    - match: '^\s*\.[a-z_]\w*'
+      scope: keyword.other.directive.asm
+    - match: '\b([xw](30|[12]?[0-9])|sp|lr|fp|pc|xzr|wzr)\b'
+      scope: variable.other.register.asm
+    - match: '#-?(0x[0-9a-fA-F]+|\d+)'
+      scope: constant.numeric.immediate.asm
+    - match: '\b0x[0-9a-fA-F]+\b'
+      scope: constant.numeric.hex.asm
+    - match: '\b(adds?|subs?|movz?|movk|ldr|ldp|str|stp|blr|bl|br|b\.[a-z]{2}|b|ret|brk|cmp|csel|cbnz|cbz|tbnz|tbz|orr|eor|and|lsl|lsr|asr|mul|madd|nop|adrp)\b'
+      scope: keyword.control.mnemonic.asm

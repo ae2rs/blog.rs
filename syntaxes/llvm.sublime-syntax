@@ -1,0 +1,27 @@
+%YAML 1.2
+---
+name: LLVM IR
+file_extensions:
+  - llvm
+  - ll
+scope: source.llvm
+contexts:
+  main:
+    - match: ';.*$'
+      scope: comment.line.semicolon.llvm
+    - match: '"[^"]*"'
+      scope: string.quoted.double.llvm
+    - match: '@("[^"]+"|[-\w$.]+)'
+      scope: entity.name.function.llvm
+    - match: '%("[^"]+"|[-\w$.]+)'
+      scope: variable.other.llvm
+    - match: '![-\w$.]*'
+      scope: support.function.llvm
+    - match: '^\s*[-\w$.]+:'
+      scope: entity.name.function.llvm
+    - match: '\b(define|declare|ret|br|call|tail|musttail|load|store|icmp|fcmp|phi|select|switch|unreachable|getelementptr|to|label|align|inbounds|nuw|nsw|eq|ne|ugt|uge|ult|ule|sgt|sge|slt|sle|add|sub|mul|shl|lshr|ashr|and|or|xor|zext|sext|trunc|bitcast)\b'
+      scope: keyword.control.llvm
+    - match: '\b(i1|i8|i16|i32|i64|i128|half|float|double|ptr|void|metadata)\b'
+      scope: support.class.llvm
+    - match: '\b\d+\b'
+      scope: constant.numeric.llvm
