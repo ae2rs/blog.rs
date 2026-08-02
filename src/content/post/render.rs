@@ -252,7 +252,7 @@ fn handle_code_event(code: CowStr, frames: &mut [Frame]) {
     append_markup(
         html! {
             code
-                class="text-[0.95em] bg-white/10 px-1 py-0.5 rounded box-decoration-clone [box-decoration-break:clone]"
+                class="text-[0.875em] bg-white/10 px-1 py-0.5 rounded box-decoration-clone [box-decoration-break:clone]"
             { (code.as_ref()) }
         },
         frames,
@@ -693,7 +693,7 @@ fn render_callout(
                     (kind.label())
                 }
             }
-            div class="mt-3 text-sm leading-7 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_p]:text-gray-100 [&_ul]:text-gray-100 [&_ol]:text-gray-100 [&_li]:text-gray-100 [&_blockquote]:my-4 [&_a:hover]:text-white [&_code]:bg-black/20 [&_code]:text-white" {
+            div class="mt-3 text-base leading-7 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_p]:text-gray-100 [&_ul]:text-gray-100 [&_ol]:text-gray-100 [&_li]:text-gray-100 [&_blockquote]:my-4 [&_a:hover]:text-white [&_code]:bg-black/20 [&_code]:text-white" {
                 (content)
             }
         }
@@ -900,7 +900,7 @@ mod tests {
         assert!(html.contains(">Note<"));
         assert!(html.contains("<em>small</em>"));
         assert!(html.contains("href=\"/note\""));
-        assert!(html.contains("code class=\"text-[0.95em] bg-white/10"));
+        assert!(html.contains("code class=\"text-[0.875em] bg-white/10"));
         assert!(html.contains("<ul class=\"list-disc"));
         assert_eq!(count_matches(&html, "code-copy-btn"), 0);
     }
