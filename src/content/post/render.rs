@@ -10,6 +10,7 @@ use crate::{component::icons, content::format::highlight::Highlighter};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum CalloutKind {
     Note,
+    Tip,
     Warning,
     Danger,
 }
@@ -18,6 +19,7 @@ impl CalloutKind {
     fn from_code_block(info: &Option<String>) -> Option<Self> {
         match code_language(info) {
             Some(language) if language.eq_ignore_ascii_case("note") => Some(Self::Note),
+            Some(language) if language.eq_ignore_ascii_case("tip") => Some(Self::Tip),
             Some(language) if language.eq_ignore_ascii_case("warning") => Some(Self::Warning),
             Some(language) if language.eq_ignore_ascii_case("danger") => Some(Self::Danger),
             _ => None,
@@ -27,6 +29,7 @@ impl CalloutKind {
     fn label(self) -> &'static str {
         match self {
             Self::Note => "Note",
+            Self::Tip => "Tip",
             Self::Warning => "Warning",
             Self::Danger => "Danger",
         }
@@ -35,6 +38,7 @@ impl CalloutKind {
     fn icon(self) -> &'static str {
         match self {
             Self::Note => icons::NOTE,
+            Self::Tip => icons::TIP,
             Self::Warning => icons::WARNING,
             Self::Danger => icons::DANGER,
         }
@@ -44,6 +48,9 @@ impl CalloutKind {
         match self {
             Self::Note => {
                 "my-6 rounded-2xl border border-sky-400/30 bg-sky-400/10 px-4 py-4 shadow-sm shadow-sky-950/20"
+            }
+            Self::Tip => {
+                "my-6 rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-4 py-4 shadow-sm shadow-emerald-950/20"
             }
             Self::Warning => {
                 "my-6 rounded-2xl border border-amber-400/35 bg-amber-300/10 px-4 py-4 shadow-sm shadow-amber-950/20"
@@ -59,6 +66,9 @@ impl CalloutKind {
             Self::Note => {
                 "flex size-8 shrink-0 items-center justify-center rounded-full bg-sky-300/15 text-sky-100"
             }
+            Self::Tip => {
+                "flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-300/15 text-emerald-100"
+            }
             Self::Warning => {
                 "flex size-8 shrink-0 items-center justify-center rounded-full bg-amber-300/20 text-amber-100"
             }
@@ -71,6 +81,7 @@ impl CalloutKind {
     fn title_classes(self) -> &'static str {
         match self {
             Self::Note => "text-sm font-semibold tracking-[0.08em] uppercase text-sky-100",
+            Self::Tip => "text-sm font-semibold tracking-[0.08em] uppercase text-emerald-100",
             Self::Warning => "text-sm font-semibold tracking-[0.08em] uppercase text-amber-100",
             Self::Danger => "text-sm font-semibold tracking-[0.08em] uppercase text-red-100",
         }
@@ -906,9 +917,13 @@ mod tests {
     }
 
     #[test]
-    fn renders_warning_and_danger_callouts() {
-        let html = render("```warning\nHeads up.\n```\n\n```danger\nStop now.\n```");
+    fn renders_tip_warning_and_danger_callouts() {
+        let html = render(
+            "```tip\nTry this.\n```\n\n```warning\nHeads up.\n```\n\n```danger\nStop now.\n```",
+        );
 
+        assert!(html.contains("border-emerald-400/30"));
+        assert!(html.contains(">Tip<"));
         assert!(html.contains("border-amber-400/35"));
         assert!(html.contains(">Warning<"));
         assert!(html.contains("border-red-400/35"));
