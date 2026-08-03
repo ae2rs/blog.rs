@@ -434,21 +434,21 @@ fn render_frame(
         FrameKind::Heading(level) => match level {
             HeadingLevel::H1 => render_heading(
                 "h1",
-                "text-4xl md:text-5xl font-semibold tracking-tight text-white mt-10 mb-6",
+                "text-4xl md:text-5xl font-semibold tracking-tight text-white mt-10 mb-6 scroll-mt-24",
                 &frame,
                 slug_counts,
                 highlighter,
             ),
             HeadingLevel::H2 => render_heading(
                 "h2",
-                "text-2xl md:text-3xl font-semibold tracking-tight text-white mt-10 mb-4",
+                "text-2xl md:text-3xl font-semibold tracking-tight text-white mt-10 mb-4 scroll-mt-24",
                 &frame,
                 slug_counts,
                 highlighter,
             ),
             _ => render_heading(
                 "h3",
-                "text-xl md:text-2xl font-semibold text-white mt-8 mb-3",
+                "text-xl md:text-2xl font-semibold text-white mt-8 mb-3 scroll-mt-24",
                 &frame,
                 slug_counts,
                 highlighter,

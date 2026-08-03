@@ -45,6 +45,7 @@ fn render_post_page(post: &Post, highlighter: &Highlighter) -> String {
     };
     let head_extras = html! {
         script src="/js/code-copy.js" defer {}
+        script src="/js/scroll-spy.js" defer {}
     };
     layout_with_head(post.meta.title, content, Some(head_extras)).into_string()
 }
